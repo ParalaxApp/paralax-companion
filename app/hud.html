@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Light strip</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+  <style>
+    /* The small strip in the corner of the screen. Clicks pass through it to the game. */
+    html,body{margin:0;height:100%;background:transparent;overflow:hidden;color:#ECEEF1;-webkit-font-smoothing:antialiased}
+    .hud{position:absolute;inset:6px;display:flex;flex-direction:column;justify-content:center;padding:6px 14px;border-left:3px solid #5fc8ea;background:linear-gradient(90deg,rgba(6,14,24,.82),rgba(6,14,24,.35));clip-path:polygon(0 0,100% 0,100% 70%,calc(100% - 12px) 100%,0 100%);transition:background .6s,border-color .6s}
+    .k{font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#9fd8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .v{text-shadow:0 1px 3px #000;font:800 21px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.06em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .v em{font-style:normal;color:#FFC21A}
+    .hud.soon{border-left-color:#FFC21A;background:linear-gradient(90deg,rgba(70,50,4,.9),rgba(6,14,24,.45));animation:pulse 1.6s ease-in-out infinite}
+    .hud.gold{border-left-color:#FFC21A;background:linear-gradient(90deg,rgba(90,62,4,.92),rgba(6,14,24,.45))}
+    @keyframes pulse{50%{border-left-color:rgba(255,194,26,.35);background:linear-gradient(90deg,rgba(6,14,24,.85),rgba(6,14,24,.4))}}
+    @media (prefers-reduced-motion:reduce){.hud.soon{animation:none}}
+  </style>
+</head>
+<body>
+  <div class="hud" id="hud"><div class="k" id="k">Paralax Verse</div><div class="v" id="v">Companion ready</div></div>
+  <script src="dn.js"></script>
+  <script src="hud.js"></script>
+</body>
+</html>

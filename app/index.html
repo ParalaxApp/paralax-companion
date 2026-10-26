@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Paralax Verse Companion</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://*.supabase.co https://paralaxverse.com; connect-src https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="panel" id="panel">
+    <header class="top" id="drag">
+      <img src="icon-64.png" alt="" class="logo">
+      <div class="brand"><b>PARALAX <span>VERSE</span></b><small>Companion</small></div>
+      <button class="x" id="close" aria-label="Hide (or press your hotkey)">×</button>
+    </header>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+    <main id="view"></main>
+    <footer class="foot" id="foot"></footer>
+  </div>
+  <script src="dn.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

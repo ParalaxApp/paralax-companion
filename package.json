@@ -1,0 +1,26 @@
+{
+  "name": "paralax-companion",
+  "productName": "Paralax Verse Companion",
+  "version": "0.1.0",
+  "description": "An in-game companion overlay for Star Citizen, from Paralax Verse. Unofficial fan project.",
+  "main": "main.js",
+  "author": "Paralax Verse",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.paralaxverse.companion",
+    "productName": "Paralax Verse Companion",
+    "files": ["main.js", "preload.js", "app/**/*"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "win": { "target": "nsis", "icon": "build/icon.png" },
+    "nsis": { "oneClick": true, "perMachine": false, "shortcutName": "Paralax Verse Companion", "artifactName": "Paralax-Verse-Companion-Setup-${version}.${ext}" }
+  }
+}
