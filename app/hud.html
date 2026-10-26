@@ -8,17 +8,17 @@
   <style>
     /* The small strip in the corner of the screen. Clicks pass through it to the game. */
     html,body{margin:0;height:100%;background:transparent;overflow:hidden;color:#ECEEF1;-webkit-font-smoothing:antialiased}
-    /* Cinematic: no box. Text floats over a soft dark haze, with a thin yellow line that fades out. */
-    .hud{position:absolute;inset:6px;display:flex;flex-direction:column;justify-content:center;padding:6px 16px;
-      background:radial-gradient(ellipse 85% 100% at 0% 50%,rgba(4,8,13,.62),rgba(4,8,13,0) 75%);transition:background .6s}
-    .hud::before{content:"";position:absolute;left:4px;top:14%;bottom:14%;width:1px;background:linear-gradient(180deg,transparent,#5fc8ea,transparent);transition:background .6s}
-    .k{font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:rgba(159,216,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #000}
-    .v{text-shadow:0 1px 3px #000,0 0 14px rgba(0,0,0,.8);font:700 21px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.12em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .v em{font-style:normal;color:#FFC21A;text-shadow:0 1px 3px #000,0 0 12px rgba(255,194,26,.55)}
-    .hud.soon::before,.hud.gold::before{background:linear-gradient(180deg,transparent,#FFC21A,transparent)}
+    /* mobiGlas look: a small glowing blue glass tag with scan lines. */
+    .hud{position:absolute;inset:8px;display:flex;flex-direction:column;justify-content:center;padding:6px 16px;border-radius:12px;
+      background:linear-gradient(160deg,rgba(127,214,242,.30),rgba(14,60,96,.32) 60%,rgba(127,214,242,.16)),repeating-linear-gradient(0deg,rgba(127,214,242,.06) 0 1px,transparent 1px 4px),rgba(4,14,24,.38);
+      box-shadow:inset 0 0 0 1px rgba(127,214,242,.5),0 0 22px rgba(127,214,242,.3);transition:background .6s,box-shadow .6s;color:#e4f7ff;text-shadow:0 0 10px rgba(127,214,242,.55),0 1px 2px rgba(0,0,0,.7)}
+    .k{font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:rgba(228,247,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .v{font:700 21px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.12em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+    .v em{font-style:normal;color:#FFC21A;text-shadow:0 0 12px rgba(255,194,26,.6),0 1px 2px rgba(0,0,0,.7)}
+    /* golden hour close or now: the glass warms to gold */
+    .hud.soon,.hud.gold{box-shadow:inset 0 0 0 1px rgba(255,194,26,.7),0 0 24px rgba(255,194,26,.4);background:linear-gradient(160deg,rgba(255,194,26,.3),rgba(96,62,4,.32) 60%,rgba(255,194,26,.14)),repeating-linear-gradient(0deg,rgba(255,194,26,.06) 0 1px,transparent 1px 4px),rgba(24,14,4,.38)}
     .hud.soon{animation:pulse 1.6s ease-in-out infinite}
-    .hud.gold{background:radial-gradient(ellipse 85% 100% at 0% 50%,rgba(90,62,4,.7),rgba(4,8,13,0) 75%)}
-    @keyframes pulse{50%{background:radial-gradient(ellipse 85% 100% at 0% 50%,rgba(90,62,4,.6),rgba(4,8,13,0) 75%)}}
+    @keyframes pulse{50%{box-shadow:inset 0 0 0 1px rgba(255,194,26,.3),0 0 8px rgba(255,194,26,.15)}}
     @media (prefers-reduced-motion:reduce){.hud.soon{animation:none}}
   </style>
 </head>

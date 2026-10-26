@@ -109,101 +109,90 @@ label.f > span{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;tex
 @keyframes blink{50%{opacity:.35}}
 
 /* ======================================================================
-   CINEMATIC LOOK (v0.2): lighter and see-through, so the game stays the star.
-   - No solid box: the panel's dark glass fades in from nothing on its left edge.
-   - Small HUD corner ticks instead of borders.
-   - Tabs are plain words with a glowing yellow underline, not blocks.
-   - Photos fade into the glass instead of sitting in hard frames.
+   MOBIGLAS LOOK (v0.3): a glowing blue hologram pane, like the in-game mobiGlas.
+   - Fixed to the right edge of the screen with no gap, hinged there and tilted slightly towards you.
+   - Swings out from the edge when you press the hotkey (class "open" is added for a moment).
+   - Faint scan lines, cyan glow on text and lines; yellow kept for prices and the main button.
    - "See-through" setting: body[data-veil] = light / medium / dark.
    ====================================================================== */
-body{--veil:.62}
-body[data-veil=light]{--veil:.42}
-body[data-veil=dark]{--veil:.82}
+body{--veil:.30;--holo:127,214,242;perspective:1300px;perspective-origin:100% 50%}
+body[data-veil=light]{--veil:.18}
+body[data-veil=dark]{--veil:.55}
 
-/* the glass: its own layer behind everything, faded on the left so there's no hard edge */
-.panel{background:none;border-left:0;box-shadow:none;backdrop-filter:none;padding-left:34px}
-.panel::after{content:"";position:absolute;inset:0;z-index:-1;
-  background:linear-gradient(90deg,rgba(4,8,13,0) 0,rgba(4,8,13,var(--veil)) 70px,rgba(4,8,13,calc(var(--veil) + .1)) 100%);
-  backdrop-filter:blur(10px);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 80px)}
-.panel{isolation:isolate}
-/* thin yellow line along the top, fading out both ways */
-.panel::before{left:34px;background:linear-gradient(90deg,transparent,rgba(255,194,26,.7) 20%,transparent 85%)}
-/* HUD corner ticks */
-.tk{position:absolute;width:14px;height:14px;border:0 solid rgba(255,194,26,.75);pointer-events:none}
-.tk.tl{top:8px;left:30px;border-top-width:1px;border-left-width:1px}
-.tk.tr{top:8px;right:8px;border-top-width:1px;border-right-width:1px}
-.tk.bl{bottom:8px;left:30px;border-bottom-width:1px;border-left-width:1px}
-.tk.br{bottom:8px;right:8px;border-bottom-width:1px;border-right-width:1px}
+/* the pane: hinged on the right (screen) edge, round corners only on the side facing the game */
+.panel{inset:0 0 0 18px;transform:rotateY(-11deg);transform-origin:100% 50%;border-left:0;border-radius:22px 0 0 22px;color:#e4f7ff;
+  background:linear-gradient(160deg,rgba(var(--holo),calc(var(--veil) + .02)),rgba(14,60,96,var(--veil)) 55%,rgba(var(--holo),calc(var(--veil) - .12))),
+    repeating-linear-gradient(0deg,rgba(var(--holo),.06) 0 1px,transparent 1px 4px),rgba(4,14,24,calc(var(--veil) + .12));
+  box-shadow:inset 1px 0 0 rgba(var(--holo),.55),inset 0 1px 0 rgba(var(--holo),.4),inset 0 -1px 0 rgba(var(--holo),.4),-10px 0 50px rgba(var(--holo),.28);
+  backdrop-filter:blur(7px);text-shadow:0 0 10px rgba(var(--holo),.45),0 1px 2px rgba(0,0,0,.6);overflow:hidden}
+/* a soft light sweeping across the glass, like a hologram */
+.panel::before{content:"";position:absolute;inset:0;left:0;right:auto;width:100%;height:auto;pointer-events:none;
+  background:linear-gradient(105deg,transparent 30%,rgba(var(--holo),.10) 45%,transparent 60%);background-size:250% 100%;animation:sweep 7s ease-in-out infinite}
+@keyframes sweep{0%{background-position:120% 0}60%,100%{background-position:-60% 0}}
+/* opening: swing out from the screen edge */
+.panel.open{animation:swing .38s cubic-bezier(.2,.8,.25,1)}
+@keyframes swing{from{transform:rotateY(-80deg);opacity:0}to{transform:rotateY(-11deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){.panel::before,.panel.open{animation:none}}
 
-.top{padding:16px 16px 6px 12px}
-.brand b{font-weight:700;font-size:19px;letter-spacing:.24em}
-.x{background:none;border:0;clip-path:none;color:var(--muted);font-size:22px;width:30px;height:30px}
-.x:hover{color:var(--accent)}
+.top{padding:20px 16px 8px 22px}
+.brand b{font-weight:700;font-size:19px;letter-spacing:.24em;color:#fff}
+.brand small{color:rgb(var(--holo))}
+.x{background:none;border:0;clip-path:none;color:rgba(228,247,255,.7);font-size:22px;width:30px;height:30px}
+.x:hover{color:#fff}
 
-/* tabs: words, not blocks */
-.tabs{gap:0;padding:4px 16px 0 12px;border-bottom:1px solid rgba(236,238,241,.08)}
-.tabs button{background:none;border:0;clip-path:none;padding:10px 0 9px;font-weight:700;font-size:13px;letter-spacing:.18em;color:rgba(236,238,241,.5);position:relative}
-.tabs button:hover{color:var(--text)}
-.tabs button[aria-selected=true]{border:0;background:none;color:var(--accent);text-shadow:0 0 12px rgba(255,194,26,.45)}
-.tabs button[aria-selected=true]::after{content:"";position:absolute;left:15%;right:15%;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 10px rgba(255,194,26,.6)}
+/* tabs: words, the open one underlined in light */
+.tabs{gap:0;padding:4px 16px 0 22px;border-bottom:1px solid rgba(var(--holo),.25)}
+.tabs button{background:none;border:0;clip-path:none;padding:10px 0 9px;font-weight:700;font-size:13px;letter-spacing:.2em;color:rgba(228,247,255,.6);position:relative}
+.tabs button:hover{color:#fff}
+.tabs button[aria-selected=true]{border:0;background:none;color:#fff}
+.tabs button[aria-selected=true]::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:2px;background:rgb(var(--holo));box-shadow:0 0 10px rgba(var(--holo),.9)}
 
-main{padding:4px 18px 14px 12px}
-.foot{border-top:0;padding:10px 18px 14px 12px;color:rgba(158,166,178,.7);background:linear-gradient(90deg,transparent,rgba(95,200,234,.18),transparent) top/100% 1px no-repeat}
+main{padding:4px 18px 14px 22px;scrollbar-color:rgba(var(--holo),.4) transparent}
+.foot{border-top:1px solid rgba(var(--holo),.25);padding:10px 18px 16px 22px;color:rgba(228,247,255,.65)}
+.foot b{color:#FFC21A}
 
-/* headings: lighter, wider, glowing */
-h1{font-weight:700;letter-spacing:.14em;font-size:32px;text-shadow:0 2px 18px rgba(0,0,0,.6)}
-.scene{margin:18px 0 10px;color:rgba(255,194,26,.9)}
-.scene::after{background:linear-gradient(90deg,rgba(255,194,26,.4),transparent)}
+h1{font-weight:700;letter-spacing:.14em;font-size:32px;color:#fff}
+.scene{margin:18px 0 10px;color:rgba(228,247,255,.8)}
+.scene::after{background:linear-gradient(90deg,rgba(var(--holo),.5),transparent)}
+.sub{color:rgb(var(--holo))}
+.p,.key p{color:rgba(228,247,255,.88)}
+.hint{color:rgba(228,247,255,.68)}
+a,.link,.credit a{color:#9fe6ff}
 
-/* controls: hairlines, no filled boxes */
-.in,select.in{background:transparent;border-bottom:1px solid rgba(236,238,241,.18);padding-left:2px}
-select.in option{background:#10151c}
-.ghost{border-left-width:2px;background:var(--glow-faint);font-weight:700;font-size:14px;letter-spacing:.14em}
-.chip{border-left-width:1px;background:none;color:rgba(236,238,241,.6);letter-spacing:.14em}
-.chip[aria-pressed=true]{border-left:2px solid var(--accent);background:var(--glow-soft);color:var(--text)}
+/* controls: glass fields with a light line underneath */
+.in,select.in{background:rgba(4,14,24,.25);border-bottom:1px solid rgba(var(--holo),.45);color:#fff}
+.in:focus{border-bottom-color:#fff;box-shadow:0 1px 0 rgba(var(--holo),.9)}
+select.in option{background:#0b2233}
+.ghost,.chip{clip-path:none;border:1px solid rgba(var(--holo),.45);border-radius:6px;background:rgba(var(--holo),.08);color:#e4f7ff;font-weight:700;letter-spacing:.14em}
+.ghost:hover,.chip:hover{background:rgba(var(--holo),.2)}
+.chip[aria-pressed=true]{border-color:#fff;background:rgba(var(--holo),.3);color:#fff;box-shadow:0 0 12px rgba(var(--holo),.45)}
+.btn{clip-path:none;border-radius:6px;background:#FFC21A;color:#14181d;text-shadow:none;box-shadow:0 0 18px rgba(255,194,26,.45);padding-right:18px}
+.btn::after{display:none}
 
-/* light readout: floating text with a soft glow behind it, no panel */
-.now{border-left:0;padding:10px 0 6px;background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(255,194,26,.10),transparent 70%)}
-.now.gold{background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(255,176,32,.28),transparent 70%)}
-.now.night{background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(74,108,255,.16),transparent 70%)}
-.now .st{font-weight:700;font-size:38px;letter-spacing:.14em;text-shadow:0 2px 20px rgba(0,0,0,.6)}
-.big{font-weight:700;letter-spacing:.04em;text-shadow:0 0 18px rgba(255,194,26,.35)}
-.bar{height:2px;margin:16px 0 6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+/* light readout */
+.now{border-left:0;padding:10px 0 6px;background:none}
+.now.gold .st{color:#ffd56a}
+.now .st{font-weight:700;font-size:38px;letter-spacing:.14em;color:#fff}
+.now .clk{color:rgba(228,247,255,.7)}
+.big{font-weight:700;text-shadow:0 0 16px rgba(255,194,26,.5)}
+.bar{height:2px;margin:16px 0 6px}
 .bar i{top:-6px;height:14px;width:1px}
-.ev,.li,.key{border-bottom:0;background:linear-gradient(90deg,rgba(236,238,241,.14),transparent 85%) bottom/100% 1px no-repeat}
+.ev,.li,.key{border-bottom:1px solid rgba(var(--holo),.2)}
 .ev b{font-weight:600;font-size:15px;letter-spacing:.12em}
+.ev span{color:rgba(228,247,255,.7)}
 
-/* spots: photos that fade away at the edges */
-.spot{background:none;margin:0 0 10px;aspect-ratio:16/8}
-.spot img{-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent),linear-gradient(90deg,#000 80%,transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
-.spot::after{background:linear-gradient(180deg,transparent 40%,rgba(4,8,13,.55))}
-.spot .t{left:2px;bottom:4px}
+/* spots: photos with soft rounded corners and a light rim */
+.spot{border-radius:10px;margin:0 0 10px;box-shadow:inset 0 0 0 1px rgba(var(--holo),.35)}
+.spot img{opacity:.92}
 .spot .t b{font-weight:700;letter-spacing:.12em}
 
 /* trade */
-.li .n b{font-weight:700;letter-spacing:.1em}
+.li:hover{background:rgba(var(--holo),.1)}
+.li .n b{font-weight:700;letter-spacing:.1em;color:#fff}
+.li .n small{color:rgba(228,247,255,.65)}
 .li .v{font-weight:700;text-shadow:0 0 14px currentColor}
-.empty{border-left-width:1px;background:none}
-.err{border-left-width:2px}
+.empty{border:1px solid rgba(var(--holo),.35);border-radius:8px;background:rgba(var(--holo),.08)}
 
-/* photo keys: glowing key names, no filled blocks */
-.key kbd{min-width:70px;background:none;border-left:1px solid rgba(255,194,26,.6);color:var(--accent);font-weight:700;text-align:left;padding:3px 10px;text-shadow:0 0 10px rgba(255,194,26,.4)}
-
-/* see-through setting chips sit in a row */
-.veil{margin-top:6px}
-/* v0.2 tweaks: fade the glass on top and bottom too (not just the left), so no edge reads as a box,
-   and keep text well inside the darker part */
-.panel{padding-left:44px}
-.panel::after{background:linear-gradient(90deg,rgba(4,8,13,0) 0,rgba(4,8,13,var(--veil)) 56px,rgba(4,8,13,calc(var(--veil) + .1)) 100%);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px),linear-gradient(180deg,transparent 0,#000 46px,#000 calc(100% - 46px),transparent 100%);
-  -webkit-mask-composite:source-in;mask-composite:intersect}
-.panel::before{left:44px;top:6px}
-.tk.tl,.tk.bl{left:40px}
-.tk.tr,.tk.br{right:14px}
-.top{padding-top:20px}
-.foot{padding-bottom:20px}
-/* photos fade in from the top as well */
-.spot img{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 18%,#000 55%,transparent),linear-gradient(90deg,#000 80%,transparent)}
-/* keep the footer on the dark glass: a shorter fade at the bottom */
-.panel::after{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px),linear-gradient(180deg,transparent 0,#000 40px,#000 calc(100% - 18px),transparent 100%)}
-.foot{padding-bottom:24px;color:rgba(190,198,210,.8)}
+/* photo keys */
+.key kbd{background:rgba(var(--holo),.12);border:1px solid rgba(var(--holo),.5);border-radius:5px;color:#fff;font-weight:700;text-align:center;padding:3px 10px}
+.hk{color:#fff;text-shadow:0 0 14px rgba(var(--holo),.8)}

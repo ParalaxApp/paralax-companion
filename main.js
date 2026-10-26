@@ -51,6 +51,8 @@ function togglePanel(force) {
   const show = force === undefined ? !panel.isVisible() : force;
   if (show) { panel.show(); panel.focus(); panel.webContents.send("shown"); }
   else panel.hide();   // Windows hands the keyboard back to the game
+  // The panel already shows the light, so the corner strip steps aside while it's open (they'd overlap otherwise)
+  if (hud && !hud.isDestroyed()) { if (show) hud.hide(); else if (settings.hud) hud.showInactive(); }
 }
 
 // ---------- The HUD strip ----------
@@ -69,12 +71,12 @@ function createHud() {
   hud.setIgnoreMouseEvents(true);                   // clicks go straight through to the game
   hud.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   hud.loadFile(path.join(__dirname, "app", "hud.html"));
-  hud.once("ready-to-show", () => { if (settings.hud) hud.showInactive(); });
+  hud.once("ready-to-show", () => { if (settings.hud && !(panel && panel.isVisible())) hud.showInactive(); });
 }
 function updateHud() {
   if (!hud) return;
   hud.setBounds(hudBounds());
-  if (settings.hud) hud.showInactive(); else hud.hide();
+  if (settings.hud && !(panel && panel.isVisible())) hud.showInactive(); else hud.hide();  // stays hidden while the panel is open
 }
 
 // ---------- Hotkey ----------

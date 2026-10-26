@@ -229,7 +229,8 @@
 
   /* ---------- start ---------- */
   api.onSettings((s) => { state.settings = { ...state.settings, ...s }; render(); });
-  api.onShown(() => render());
+  // each time the panel opens: redraw, and swing it out from the screen edge
+  api.onShown(() => { render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); });
   api.getSettings().then((s) => { state.settings = s; render(); });
   setInterval(() => { if (state.tab === "light" && !document.hidden) render(); }, 20000);  // keep the countdowns fresh
 })();
