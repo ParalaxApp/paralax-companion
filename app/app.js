@@ -150,6 +150,8 @@
     h += `<div class="scene">Light strip</div><div class="chips"><button class="chip" data-hud="1" aria-pressed="${!!s.hud}">On</button><button class="chip" data-hud="0" aria-pressed="${!s.hud}">Off</button></div>` +
       `<label class="f"><span>Corner</span><select class="in" id="s-corner">${["top-right", "top-left", "bottom-right", "bottom-left"].map((c) => `<option value="${c}"${s.hudCorner === c ? " selected" : ""}>${c.replace("-", " ")}</option>`).join("")}</select></label>` +
       `<label class="f"><span>Warn me before golden hour (minutes)</span><input class="in" id="s-alert" type="number" min="0" max="60" value="${esc(s.alertMins)}"></label>`;
+    // how much of the game shows through the panel
+    h += `<div class="scene">See-through</div><div class="chips veil">${[["light", "More game"], ["medium", "Balanced"], ["dark", "Easier to read"]].map(([k, l]) => `<button class="chip" data-veil="${k}" aria-pressed="${(s.veil || "medium") === k}">${l}</button>`).join("")}</div>`;
     h += `<div class="scene">Trade data (UEX)</div><label class="f"><span>Your UEX app key</span><input class="in" id="s-uex" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key from uexcorp.space" value="${esc(s.uexToken)}"></label>` +
       `<div class="row"><button class="ghost" data-act="saveUex">Save key</button><button class="ghost" data-act="checkUex">Check connection</button></div>${state.check ? `<p class="hint">${esc(state.check)}</p>` : ""}` +
       `<p class="hint">Free from uexcorp.space → API → My Apps. It stays on this PC.</p>`;
@@ -163,6 +165,7 @@
   const TABS = [["light", "Light"], ["spots", "Spots"], ["trade", "Trade"], ["photo", "Photo"], ["settings", "Settings"]];
   function render() {
     if (!state.settings) return;
+    document.body.dataset.veil = state.settings.veil || "medium";  // see-through level
     $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${l}</button>`).join("");
     const keepQ = document.activeElement && document.activeElement.id === "t-q" ? document.activeElement.selectionStart : null;
     const v = { light: viewLight, spots: viewSpots, trade: viewTrade, photo: viewPhoto, settings: viewSettings }[state.tab];
@@ -181,6 +184,7 @@
     if (t.dataset.open) return api.open(t.dataset.open);
     if (t.dataset.comm) { state.comm = Number(t.dataset.comm) || t.dataset.comm; render(); $("#view").scrollTop = 0; return; }
     if (t.dataset.hud) { await save({ hud: t.dataset.hud === "1" }); return; }
+    if (t.dataset.veil) { await save({ veil: t.dataset.veil }); return; }
     if (t.dataset.start) { await save({ startWithWindows: !s.startWithWindows }); return; }
     switch (t.dataset.act) {
       case "back": state.comm = null; render(); break;

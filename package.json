@@ -1,7 +1,7 @@
 {
   "name": "paralax-companion",
   "productName": "Paralax Verse Companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An in-game companion overlay for Star Citizen, from Paralax Verse. Unofficial fan project.",
   "main": "main.js",
   "author": "Paralax Verse",

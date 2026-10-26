@@ -107,3 +107,103 @@ label.f > span{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;tex
 .hk{font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:.08em;color:var(--accent)}
 .hk.rec{animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
+
+/* ======================================================================
+   CINEMATIC LOOK (v0.2): lighter and see-through, so the game stays the star.
+   - No solid box: the panel's dark glass fades in from nothing on its left edge.
+   - Small HUD corner ticks instead of borders.
+   - Tabs are plain words with a glowing yellow underline, not blocks.
+   - Photos fade into the glass instead of sitting in hard frames.
+   - "See-through" setting: body[data-veil] = light / medium / dark.
+   ====================================================================== */
+body{--veil:.62}
+body[data-veil=light]{--veil:.42}
+body[data-veil=dark]{--veil:.82}
+
+/* the glass: its own layer behind everything, faded on the left so there's no hard edge */
+.panel{background:none;border-left:0;box-shadow:none;backdrop-filter:none;padding-left:34px}
+.panel::after{content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(90deg,rgba(4,8,13,0) 0,rgba(4,8,13,var(--veil)) 70px,rgba(4,8,13,calc(var(--veil) + .1)) 100%);
+  backdrop-filter:blur(10px);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 80px)}
+.panel{isolation:isolate}
+/* thin yellow line along the top, fading out both ways */
+.panel::before{left:34px;background:linear-gradient(90deg,transparent,rgba(255,194,26,.7) 20%,transparent 85%)}
+/* HUD corner ticks */
+.tk{position:absolute;width:14px;height:14px;border:0 solid rgba(255,194,26,.75);pointer-events:none}
+.tk.tl{top:8px;left:30px;border-top-width:1px;border-left-width:1px}
+.tk.tr{top:8px;right:8px;border-top-width:1px;border-right-width:1px}
+.tk.bl{bottom:8px;left:30px;border-bottom-width:1px;border-left-width:1px}
+.tk.br{bottom:8px;right:8px;border-bottom-width:1px;border-right-width:1px}
+
+.top{padding:16px 16px 6px 12px}
+.brand b{font-weight:700;font-size:19px;letter-spacing:.24em}
+.x{background:none;border:0;clip-path:none;color:var(--muted);font-size:22px;width:30px;height:30px}
+.x:hover{color:var(--accent)}
+
+/* tabs: words, not blocks */
+.tabs{gap:0;padding:4px 16px 0 12px;border-bottom:1px solid rgba(236,238,241,.08)}
+.tabs button{background:none;border:0;clip-path:none;padding:10px 0 9px;font-weight:700;font-size:13px;letter-spacing:.18em;color:rgba(236,238,241,.5);position:relative}
+.tabs button:hover{color:var(--text)}
+.tabs button[aria-selected=true]{border:0;background:none;color:var(--accent);text-shadow:0 0 12px rgba(255,194,26,.45)}
+.tabs button[aria-selected=true]::after{content:"";position:absolute;left:15%;right:15%;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 10px rgba(255,194,26,.6)}
+
+main{padding:4px 18px 14px 12px}
+.foot{border-top:0;padding:10px 18px 14px 12px;color:rgba(158,166,178,.7);background:linear-gradient(90deg,transparent,rgba(95,200,234,.18),transparent) top/100% 1px no-repeat}
+
+/* headings: lighter, wider, glowing */
+h1{font-weight:700;letter-spacing:.14em;font-size:32px;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+.scene{margin:18px 0 10px;color:rgba(255,194,26,.9)}
+.scene::after{background:linear-gradient(90deg,rgba(255,194,26,.4),transparent)}
+
+/* controls: hairlines, no filled boxes */
+.in,select.in{background:transparent;border-bottom:1px solid rgba(236,238,241,.18);padding-left:2px}
+select.in option{background:#10151c}
+.ghost{border-left-width:2px;background:var(--glow-faint);font-weight:700;font-size:14px;letter-spacing:.14em}
+.chip{border-left-width:1px;background:none;color:rgba(236,238,241,.6);letter-spacing:.14em}
+.chip[aria-pressed=true]{border-left:2px solid var(--accent);background:var(--glow-soft);color:var(--text)}
+
+/* light readout: floating text with a soft glow behind it, no panel */
+.now{border-left:0;padding:10px 0 6px;background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(255,194,26,.10),transparent 70%)}
+.now.gold{background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(255,176,32,.28),transparent 70%)}
+.now.night{background:radial-gradient(ellipse 70% 90% at 0% 50%,rgba(74,108,255,.16),transparent 70%)}
+.now .st{font-weight:700;font-size:38px;letter-spacing:.14em;text-shadow:0 2px 20px rgba(0,0,0,.6)}
+.big{font-weight:700;letter-spacing:.04em;text-shadow:0 0 18px rgba(255,194,26,.35)}
+.bar{height:2px;margin:16px 0 6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.bar i{top:-6px;height:14px;width:1px}
+.ev,.li,.key{border-bottom:0;background:linear-gradient(90deg,rgba(236,238,241,.14),transparent 85%) bottom/100% 1px no-repeat}
+.ev b{font-weight:600;font-size:15px;letter-spacing:.12em}
+
+/* spots: photos that fade away at the edges */
+.spot{background:none;margin:0 0 10px;aspect-ratio:16/8}
+.spot img{-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent),linear-gradient(90deg,#000 80%,transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
+.spot::after{background:linear-gradient(180deg,transparent 40%,rgba(4,8,13,.55))}
+.spot .t{left:2px;bottom:4px}
+.spot .t b{font-weight:700;letter-spacing:.12em}
+
+/* trade */
+.li .n b{font-weight:700;letter-spacing:.1em}
+.li .v{font-weight:700;text-shadow:0 0 14px currentColor}
+.empty{border-left-width:1px;background:none}
+.err{border-left-width:2px}
+
+/* photo keys: glowing key names, no filled blocks */
+.key kbd{min-width:70px;background:none;border-left:1px solid rgba(255,194,26,.6);color:var(--accent);font-weight:700;text-align:left;padding:3px 10px;text-shadow:0 0 10px rgba(255,194,26,.4)}
+
+/* see-through setting chips sit in a row */
+.veil{margin-top:6px}
+/* v0.2 tweaks: fade the glass on top and bottom too (not just the left), so no edge reads as a box,
+   and keep text well inside the darker part */
+.panel{padding-left:44px}
+.panel::after{background:linear-gradient(90deg,rgba(4,8,13,0) 0,rgba(4,8,13,var(--veil)) 56px,rgba(4,8,13,calc(var(--veil) + .1)) 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px),linear-gradient(180deg,transparent 0,#000 46px,#000 calc(100% - 46px),transparent 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+.panel::before{left:44px;top:6px}
+.tk.tl,.tk.bl{left:40px}
+.tk.tr,.tk.br{right:14px}
+.top{padding-top:20px}
+.foot{padding-bottom:20px}
+/* photos fade in from the top as well */
+.spot img{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 18%,#000 55%,transparent),linear-gradient(90deg,#000 80%,transparent)}
+/* keep the footer on the dark glass: a shorter fade at the bottom */
+.panel::after{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 56px),linear-gradient(180deg,transparent 0,#000 40px,#000 calc(100% - 18px),transparent 100%)}
+.foot{padding-bottom:24px;color:rgba(190,198,210,.8)}

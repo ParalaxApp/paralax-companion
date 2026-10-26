@@ -17,6 +17,7 @@ const DEFAULTS = {
   hotkey: "Control+Shift+P",   // shows / hides the panel
   hud: true,                   // the small light strip in the corner
   hudCorner: "top-right",
+  veil: "medium",              // how see-through the panel is: light, medium or dark
   system: "Stanton", body: "Hurston", place: "Lorville",   // the place the HUD watches
   alertMins: 5,                // flash the HUD this many minutes before golden hour
   uexToken: "",                // free key from uexcorp.space (for the Trade tab)
@@ -35,7 +36,7 @@ function createPanel() {
   const wa = screen.getPrimaryDisplay().workArea;
   const w = 460, h = Math.min(820, wa.height - 40);
   panel = new BrowserWindow({
-    width: w, height: h, x: wa.x + wa.width - w - 20, y: wa.y + 20,
+    width: w, height: h, x: wa.x + wa.width - w, y: wa.y + 20,   // docked to the right edge of the screen
     frame: false, transparent: true, resizable: false, movable: true, alwaysOnTop: true, skipTaskbar: true,
     show: false, fullscreenable: false, backgroundColor: "#00000000", title: "Paralax Verse Companion",
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
