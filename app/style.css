@@ -196,3 +196,37 @@ select.in option{background:#0b2233}
 /* photo keys */
 .key kbd{background:rgba(var(--holo),.12);border:1px solid rgba(var(--holo),.5);border-radius:5px;color:#fff;font-weight:700;text-align:center;padding:3px 10px}
 .hk{color:#fff;text-shadow:0 0 14px rgba(var(--holo),.8)}
+
+/* v0.4: more professional. Smoky neutral glass with only a hint of cool tint, more see-through,
+   softer glow, so it looks like part of the game's interface rather than a bright blue box. */
+body{--holo:205,228,240;--veil:.40}
+body[data-veil=light]{--veil:.26}
+body[data-veil=dark]{--veil:.62}
+.panel{color:#eef4f7;
+  background:linear-gradient(160deg,rgba(var(--holo),.10),rgba(140,170,190,.05) 55%,rgba(var(--holo),.04)),
+    repeating-linear-gradient(0deg,rgba(var(--holo),.025) 0 1px,transparent 1px 4px),rgba(8,13,18,var(--veil));
+  box-shadow:inset 1px 0 0 rgba(var(--holo),.32),inset 0 1px 0 rgba(var(--holo),.22),inset 0 -1px 0 rgba(var(--holo),.22),-8px 0 40px rgba(0,0,0,.25);
+  backdrop-filter:blur(10px);text-shadow:0 1px 2px rgba(0,0,0,.6);border-radius:16px 0 0 16px}
+.panel::before{background:linear-gradient(105deg,transparent 35%,rgba(var(--holo),.05) 47%,transparent 58%);background-size:250% 100%}
+.brand small,.sub{color:rgba(var(--holo),.8)}
+.tabs button[aria-selected=true]::after{background:#fff;box-shadow:0 0 8px rgba(var(--holo),.6)}
+.tabs button{color:rgba(238,244,247,.55)}
+.scene{color:rgba(238,244,247,.7)}
+.scene::after{background:linear-gradient(90deg,rgba(var(--holo),.35),transparent)}
+.p,.key p{color:rgba(238,244,247,.86)}
+.hint{color:rgba(238,244,247,.62)}
+a,.link,.credit a{color:#bfe3f2}
+.ghost,.chip{border-color:rgba(var(--holo),.3);background:rgba(var(--holo),.05);color:#eef4f7}
+.ghost:hover,.chip:hover{background:rgba(var(--holo),.12)}
+.chip[aria-pressed=true]{border-color:rgba(255,255,255,.8);background:rgba(var(--holo),.16);box-shadow:none}
+.btn{box-shadow:none}
+.li .v{text-shadow:none}
+.big{text-shadow:none}
+.hk{text-shadow:none}
+.key kbd{background:rgba(var(--holo),.06);border-color:rgba(var(--holo),.3)}
+.ev,.li,.key{border-bottom-color:rgba(var(--holo),.14)}
+.spot{box-shadow:inset 0 0 0 1px rgba(var(--holo),.2)}
+.in,select.in{background:rgba(8,13,18,.2);border-bottom-color:rgba(var(--holo),.3)}
+/* a slightly slower, smoother swing out from the edge; "More game" a touch less clear so text stays readable */
+.panel.open{animation:swing .55s cubic-bezier(.16,.84,.3,1)}
+body[data-veil=light]{--veil:.30}

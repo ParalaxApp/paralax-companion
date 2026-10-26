@@ -8,18 +8,22 @@
   <style>
     /* The small strip in the corner of the screen. Clicks pass through it to the game. */
     html,body{margin:0;height:100%;background:transparent;overflow:hidden;color:#ECEEF1;-webkit-font-smoothing:antialiased}
-    /* mobiGlas look: a small glowing blue glass tag with scan lines. */
-    .hud{position:absolute;inset:8px;display:flex;flex-direction:column;justify-content:center;padding:6px 16px;border-radius:12px;
-      background:linear-gradient(160deg,rgba(127,214,242,.30),rgba(14,60,96,.32) 60%,rgba(127,214,242,.16)),repeating-linear-gradient(0deg,rgba(127,214,242,.06) 0 1px,transparent 1px 4px),rgba(4,14,24,.38);
-      box-shadow:inset 0 0 0 1px rgba(127,214,242,.5),0 0 22px rgba(127,214,242,.3);transition:background .6s,box-shadow .6s;color:#e4f7ff;text-shadow:0 0 10px rgba(127,214,242,.55),0 1px 2px rgba(0,0,0,.7)}
-    .k{font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:rgba(228,247,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .v{font:700 21px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.12em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
-    .v em{font-style:normal;color:#FFC21A;text-shadow:0 0 12px rgba(255,194,26,.6),0 1px 2px rgba(0,0,0,.7)}
-    /* golden hour close or now: the glass warms to gold */
-    .hud.soon,.hud.gold{box-shadow:inset 0 0 0 1px rgba(255,194,26,.7),0 0 24px rgba(255,194,26,.4);background:linear-gradient(160deg,rgba(255,194,26,.3),rgba(96,62,4,.32) 60%,rgba(255,194,26,.14)),repeating-linear-gradient(0deg,rgba(255,194,26,.06) 0 1px,transparent 1px 4px),rgba(24,14,4,.38)}
-    .hud.soon{animation:pulse 1.6s ease-in-out infinite}
-    @keyframes pulse{50%{box-shadow:inset 0 0 0 1px rgba(255,194,26,.3),0 0 8px rgba(255,194,26,.15)}}
-    @media (prefers-reduced-motion:reduce){.hud.soon{animation:none}}
+    /* mobiGlas look, toned down: smoky glass with a faint cool tint, attached to the screen edge.
+       Rounded corners only on the side facing the game. Gold only on the text when golden hour is near. */
+    .hud{position:absolute;top:8px;bottom:8px;left:8px;right:0;display:flex;flex-direction:column;justify-content:center;padding:6px 18px;border-radius:10px 0 0 10px;
+      background:linear-gradient(160deg,rgba(205,228,240,.10),rgba(140,170,190,.05) 60%,rgba(205,228,240,.04)),repeating-linear-gradient(0deg,rgba(205,228,240,.025) 0 1px,transparent 1px 4px),rgba(8,13,18,.42);
+      box-shadow:inset 1px 0 0 rgba(205,228,240,.32),inset 0 1px 0 rgba(205,228,240,.22),inset 0 -1px 0 rgba(205,228,240,.22);backdrop-filter:blur(8px);
+      transition:box-shadow .6s;color:#eef4f7;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+    .hud[data-side=left]{left:0;right:8px;border-radius:0 10px 10px 0;box-shadow:inset -1px 0 0 rgba(205,228,240,.32),inset 0 1px 0 rgba(205,228,240,.22),inset 0 -1px 0 rgba(205,228,240,.22)}
+    .k{font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.22em;text-transform:uppercase;color:rgba(205,228,240,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .v{font:700 21px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.08em;text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+    .v em{font-style:normal;color:#FFC21A}
+    /* golden hour close or now: a thin gold line on the glass, the glass itself stays the same */
+    .hud.soon,.hud.gold{box-shadow:inset 2px 0 0 #FFC21A,inset 0 1px 0 rgba(205,228,240,.22),inset 0 -1px 0 rgba(205,228,240,.22)}
+    .hud[data-side=left].soon,.hud[data-side=left].gold{box-shadow:inset -2px 0 0 #FFC21A,inset 0 1px 0 rgba(205,228,240,.22),inset 0 -1px 0 rgba(205,228,240,.22)}
+    .hud.soon .v em{animation:pulse 1.6s ease-in-out infinite}
+    @keyframes pulse{50%{opacity:.45}}
+    @media (prefers-reduced-motion:reduce){.hud.soon .v em{animation:none}}
   </style>
 </head>
 <body>

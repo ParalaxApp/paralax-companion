@@ -2,13 +2,14 @@
 (function () {
   const api = window.pv, DN = window.DN;
   let s = null;
-  const inText = (d) => { const m = Math.max(0, Math.round((d - Date.now()) / 6e4)); return m < 1 ? "now" : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+  const inText = (d) => { const m = Math.max(0, Math.round((d - Date.now()) / 6e4)); return m < 1 ? "now" : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
   const set = (id, html) => { document.getElementById(id).innerHTML = html; };
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function draw() {
     if (!s) return;
     const place = DN.findPlace(s.place, s.body), hud = document.getElementById("hud");
     hud.className = "hud";
+    hud.dataset.side = (s.hudCorner || "top-right").includes("left") ? "left" : "right";  // which screen edge it sits against
     if (!place) { set("k", "Paralax Verse"); set("v", `Pick a place · <em>${esc(s.hotkey)}</em>`); return; }
     const x = DN.sunAt(place);
     set("k", `${esc(place[0])} · ${esc(place[1])}`);

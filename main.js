@@ -34,9 +34,9 @@ let panel = null, hud = null, tray = null, hotkeyOk = true;
 // ---------- The panel ----------
 function createPanel() {
   const wa = screen.getPrimaryDisplay().workArea;
-  const w = 460, h = Math.min(820, wa.height - 40);
+  const w = 460, h = Math.min(780, wa.height - 80);
   panel = new BrowserWindow({
-    width: w, height: h, x: wa.x + wa.width - w, y: wa.y + 20,   // docked to the right edge of the screen
+    width: w, height: h, x: wa.x + wa.width - w, y: wa.y + Math.round((wa.height - h) / 2),   // docked to the right edge, in the middle
     frame: false, transparent: true, resizable: false, movable: true, alwaysOnTop: true, skipTaskbar: true,
     show: false, fullscreenable: false, backgroundColor: "#00000000", title: "Paralax Verse Companion",
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
@@ -57,9 +57,9 @@ function togglePanel(force) {
 
 // ---------- The HUD strip ----------
 function hudBounds() {
-  const wa = screen.getPrimaryDisplay().workArea, w = 340, h = 74, m = 16;
+  const wa = screen.getPrimaryDisplay().workArea, w = 380, h = 74, m = 16;
   const right = settings.hudCorner.includes("right"), bottom = settings.hudCorner.includes("bottom");
-  return { width: w, height: h, x: right ? wa.x + wa.width - w - m : wa.x + m, y: bottom ? wa.y + wa.height - h - m : wa.y + m };
+  return { width: w, height: h, x: right ? wa.x + wa.width - w : wa.x, y: bottom ? wa.y + wa.height - h - m : wa.y + m };  // touches the screen edge, like the panel
 }
 function createHud() {
   hud = new BrowserWindow({
