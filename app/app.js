@@ -177,7 +177,7 @@
     const v = { light: viewLight, spots: viewSpots, trade: viewTrade, photo: viewPhoto, settings: viewSettings }[state.tab];
     $("#view").innerHTML = v();
     if (keepQ !== null) { const i = $("#t-q"); if (i) { i.focus(); i.setSelectionRange(keepQ, keepQ); } }
-    $("#foot").innerHTML = `<span>Hotkey <b>${esc(state.settings.hotkey.replace(/\+/g, " + "))}</b></span><span>v${esc(state.settings.version || "")} · Unofficial fan app</span>`;
+    $("#foot").innerHTML = `<span>Hotkey <b>${esc(state.settings.hotkey.replace(/\+/g, " + "))}</b> · ← → tabs · ↑ ↓ scroll</span><span>v${esc(state.settings.version || "")} · Unofficial fan app</span>`;
   }
 
   /* ---------- taps and typing ---------- */
@@ -231,6 +231,14 @@
       return;
     }
     if (e.key === "Escape") api.hide();
+    // no mouse needed: ← → change tab, ↑ ↓ scroll (not while typing in a box)
+    if (/INPUT|SELECT|TEXTAREA/.test((e.target && e.target.tagName) || "")) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      const i = TABS.findIndex(([k]) => k === state.tab), n = TABS.length;
+      state.tab = TABS[(i + (e.key === "ArrowRight" ? 1 : -1) + n) % n][0]; state.err = ""; render();
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); $("#view").scrollBy({ top: e.key === "ArrowDown" ? 120 : -120, behavior: "smooth" }); }
   });
   async function save(patch) { state.settings = await api.setSettings(patch); render(); }
 

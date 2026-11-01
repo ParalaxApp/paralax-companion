@@ -82,9 +82,35 @@ function updateHud() {
 }
 
 // ---------- Hotkey ----------
+// Two ways of hearing the hotkey, because Star Citizen blocks normal Windows hotkeys while it's in front:
+//   1. Windows' own hotkey (works on the desktop and in most apps)
+//   2. a keyboard listener (the same kind Discord and OBS use for push-to-talk). It only listens:
+//      it never presses keys, and never touches the game.
+// If both hear the same key press, it only counts once.
+let lastToggle = 0, hookPaused = false, keyListenerOn = false;
+function toggleOnce() { if (Date.now() - lastToggle < 350) return; lastToggle = Date.now(); togglePanel(); }
+function parseHotkey(acc) {   // "Control+Shift+F9" -> { ctrl, alt, shift, key: "F9" }
+  const parts = String(acc || "").split("+");
+  const key = parts.pop();
+  return { ctrl: parts.includes("Control") || parts.includes("CommandOrControl"), alt: parts.includes("Alt"), shift: parts.includes("Shift"), key };
+}
+function startKeyListener() {
+  let hook;
+  try { hook = require("uiohook-napi"); } catch (e) { console.error("keyboard listener not available", e); return; }
+  const { uIOhook, UiohookKey } = hook;
+  const NAMES = { Up: "ArrowUp", Down: "ArrowDown", Left: "ArrowLeft", Right: "ArrowRight", Space: "Space", Insert: "Insert", Delete: "Delete", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown" };
+  uIOhook.on("keydown", (e) => {
+    if (hookPaused) return;
+    const h = parseHotkey(settings.hotkey), code = UiohookKey[NAMES[h.key] || h.key];
+    if (code === undefined || e.keycode !== code) return;
+    if (!!e.ctrlKey === h.ctrl && !!e.altKey === h.alt && !!e.shiftKey === h.shift) toggleOnce();
+  });
+  try { uIOhook.start(); keyListenerOn = true; app.on("will-quit", () => { try { uIOhook.stop(); } catch (er) { /* ignore */ } }); } catch (e) { console.error(e); }
+}
 function registerHotkey() {
   globalShortcut.unregisterAll();
-  try { hotkeyOk = globalShortcut.register(settings.hotkey, () => togglePanel()); } catch (e) { hotkeyOk = false; }
+  try { hotkeyOk = globalShortcut.register(settings.hotkey, () => toggleOnce()); } catch (e) { hotkeyOk = false; }
+  if (!hotkeyOk && keyListenerOn) hotkeyOk = true;   // the keyboard listener still hears it, even if Windows says it's taken
   if (tray) tray.setToolTip(`Paralax Verse Companion · ${hotkeyOk ? settings.hotkey + " to open" : "hotkey not available, pick another in Settings"}`);
 }
 
@@ -170,14 +196,14 @@ ipcMain.handle("uex", (e, endpoint, params, ttl) => uex(endpoint, params, ttl));
 ipcMain.handle("open", (e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
 ipcMain.handle("openFolder", () => shell.openPath(settings.shotsFolder));
 ipcMain.handle("panel:hide", () => togglePanel(false));
-ipcMain.handle("panel:pauseHotkey", (e, on) => { if (on) globalShortcut.unregisterAll(); else registerHotkey(); });  // while picking a new hotkey
+ipcMain.handle("panel:pauseHotkey", (e, on) => { hookPaused = !!on; if (on) globalShortcut.unregisterAll(); else registerHotkey(); });  // while picking a new hotkey
 
 // ---------- Start ----------
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on("second-instance", () => togglePanel(true));
 app.whenReady().then(() => {
   loadSettings();
-  createPanel(); createHud(); createTray(); registerHotkey(); watchClipboard();
+  createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard();
   togglePanel(true);  // show it once at start, so people know it's running
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());

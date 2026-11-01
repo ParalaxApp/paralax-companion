@@ -1,7 +1,7 @@
 {
   "name": "paralax-companion",
   "productName": "Paralax Verse Companion",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "An in-game companion overlay for Star Citizen, from Paralax Verse. Unofficial fan project.",
   "main": "main.js",
   "author": "Paralax Verse",
@@ -18,9 +18,30 @@
   "build": {
     "appId": "com.paralaxverse.companion",
     "productName": "Paralax Verse Companion",
-    "files": ["main.js", "preload.js", "app/**/*"],
-    "directories": { "output": "dist", "buildResources": "build" },
-    "win": { "target": "nsis", "icon": "build/icon.png" },
-    "nsis": { "oneClick": true, "perMachine": false, "shortcutName": "Paralax Verse Companion", "artifactName": "Paralax-Verse-Companion-Setup-${version}.${ext}" }
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Paralax Verse Companion",
+      "artifactName": "Paralax-Verse-Companion-Setup-${version}.${ext}"
+    },
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**"
+    ]
+  },
+  "dependencies": {
+    "uiohook-napi": "1.5.4"
   }
 }
