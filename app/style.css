@@ -230,3 +230,10 @@ a,.link,.credit a{color:#bfe3f2}
 /* a slightly slower, smoother swing out from the edge; "More game" a touch less clear so text stays readable */
 .panel.open{animation:swing .55s cubic-bezier(.16,.84,.3,1)}
 body[data-veil=light]{--veil:.30}
+
+/* Auto location (0.5): where /showlocation last put you, at the top of the Light tab */
+.loc{display:flex;flex-direction:column;gap:3px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(79,195,224,.08);box-shadow:inset 2px 0 0 #4FC3E0}
+.loc b{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;letter-spacing:.04em;color:#ECEEF1}
+.loc span{font-size:12px;color:rgba(228,247,255,.68)}
+.loc code,.hint code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.08);color:#ECEEF1}
+.hint-loc{background:rgba(255,255,255,.04);box-shadow:inset 2px 0 0 rgba(255,194,26,.6)}

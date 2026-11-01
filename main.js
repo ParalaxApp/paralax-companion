@@ -8,7 +8,7 @@
 // Safety: the app never touches the game. It doesn't read the game's memory or files, and doesn't inject anything.
 // It only draws its own windows on top, the same way Discord or Steam pop-ups do.
 
-const { app, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, shell, screen, nativeImage } = require("electron");
+const { app, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, shell, screen, nativeImage, clipboard } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -22,7 +22,9 @@ const DEFAULTS = {
   alertMins: 5,                // flash the HUD this many minutes before golden hour
   uexToken: "",                // free key from uexcorp.space (for the Trade tab)
   shotsFolder: "C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\ScreenShots",
-  startWithWindows: false
+  startWithWindows: false,
+  autoLocation: true,          // follow /showlocation from the game (via the clipboard)
+  lastLocation: null           // { text, at, kind } the last place /showlocation told us
 };
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
 let settings = { ...DEFAULTS };
@@ -120,6 +122,37 @@ async function uex(endpoint, params, ttlMin) {
   } catch (e) { return { error: "offline" }; }
 }
 
+// ---------- Auto location from /showlocation ----------
+// In Star Citizen, typing /showlocation in chat copies your position to the clipboard. We look at the clipboard
+// once a second: if it's a /showlocation line, we work out where that is and switch the Light and Spots tabs to it.
+// Anything else on the clipboard is ignored: it isn't kept, logged or sent anywhere.
+// Still hands off the game: the game itself puts the text on the clipboard when YOU type the command.
+global.window = global.window || {};
+require("./app/dn.js"); require("./app/geo.js"); require("./app/locate.js");
+const LOC = global.window.LOC;
+let lastClip = null;
+function logLocation(line) {   // a small local log of /showlocation readings, to help fix any wrong guesses
+  try { fs.appendFileSync(path.join(app.getPath("userData"), "locations.log"), line + "\n"); } catch (e) { /* ignore */ }
+}
+function watchClipboard() {
+  setInterval(() => {
+    if (!settings.autoLocation) return;
+    let text = "";
+    try { text = clipboard.readText(); } catch (e) { return; }
+    if (text === lastClip) return;
+    const first = lastClip === null; lastClip = text;
+    if (first) return;                          // whatever was there when the app started is old news
+    const xyz = LOC.parse(text); if (!xyz) return;
+    const at = Date.now(), r = LOC.locate(xyz, at);
+    logLocation(`${new Date(at).toISOString()}\t${xyz.join(" ")}\t${r ? r.text : "unknown"}`);
+    const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
+    if (r) { settings.system = r.system; settings.body = r.body; if (r.place) settings.place = r.place; }
+    settings.lastLocation = found;
+    saveSettings(); broadcast();
+    [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("located", found));
+  }, 1000);
+}
+
 // ---------- Messages from the windows ----------
 ipcMain.handle("settings:get", () => ({ ...settings, hotkeyOk, version: app.getVersion() }));
 ipcMain.handle("settings:set", (e, patch) => {
@@ -144,7 +177,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 app.on("second-instance", () => togglePanel(true));
 app.whenReady().then(() => {
   loadSettings();
-  createPanel(); createHud(); createTray(); registerHotkey();
+  createPanel(); createHud(); createTray(); registerHotkey(); watchClipboard();
   togglePanel(true);  // show it once at start, so people know it's running
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());

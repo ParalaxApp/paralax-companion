@@ -6,7 +6,7 @@
   const set = (id, html) => { document.getElementById(id).innerHTML = html; };
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function draw() {
-    if (!s) return;
+    if (!s || document.getElementById("hud").classList.contains("loc") && Date.now() - ((s.lastLocation && s.lastLocation.at) || 0) < 5500) return;
     const place = DN.findPlace(s.place, s.body), hud = document.getElementById("hud");
     hud.className = "hud";
     hud.dataset.side = (s.hudCorner || "top-right").includes("left") ? "left" : "right";  // which screen edge it sits against
@@ -21,6 +21,13 @@
       set("v", `${esc(x.status.replace(/ golden hour/i, ""))} · gold <em>${inText(x.nextGolden)}</em>`);
     } else set("v", esc(x.status));
   }
+  // /showlocation picked up: show where for a few seconds, then back to the light
+  let flash = 0;
+  if (api.onLocated) api.onLocated((r) => {
+    clearTimeout(flash); const hud = document.getElementById("hud");
+    hud.className = "hud loc"; set("k", "📍 Location updated"); set("v", esc(r.text));
+    flash = setTimeout(draw, 6000);
+  });
   api.getSettings().then((v) => { s = v; draw(); });
   api.onSettings((v) => { s = v; draw(); });
   setInterval(draw, 15000);

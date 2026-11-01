@@ -24,6 +24,9 @@
     .hud.soon .v em{animation:pulse 1.6s ease-in-out infinite}
     @keyframes pulse{50%{opacity:.45}}
     @media (prefers-reduced-motion:reduce){.hud.soon .v em{animation:none}}
+    /* /showlocation just picked up: a blue edge for a few seconds */
+    .hud.loc{box-shadow:inset 2px 0 0 #4FC3E0,inset 0 1px 0 rgba(205,228,240,.22),inset 0 -1px 0 rgba(205,228,240,.22)}
+    .hud.loc .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   </style>
 </head>
 <body>

@@ -32,6 +32,10 @@
   function viewLight() {
     const s = state.settings, place = DN.findPlace(s.place, s.body) || placesOn(s.body)[0];
     let h = `<div class="scene">Light · ${esc(s.system)}</div>`;
+    // where /showlocation last put you (or how to use it)
+    const L = s.lastLocation;
+    h += s.autoLocation === false ? "" : L ? `<div class="loc"><b>📍 ${esc(L.text)}</b><span>From /showlocation · ${ago(Math.round(L.at / 1000))}</span></div>`
+      : `<div class="loc hint-loc"><b>📍 Set your place automatically</b><span>In game, type <code>/showlocation</code> in chat. The companion picks it up from there.</span></div>`;
     h += `<div class="row"><select class="in" id="l-sys" aria-label="System">${systems().map((x) => `<option${x === s.system ? " selected" : ""}>${esc(x)}</option>`).join("")}</select>` +
       `<select class="in" id="l-body" aria-label="Planet or moon">${bodiesIn(s.system).map((x) => `<option${x === s.body ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></div>`;
     h += `<label class="f"><span>Place</span><select class="in" id="l-place">${placesOn(s.body).map((p) => `<option${place && p[0] === place[0] ? " selected" : ""}>${esc(p[0])}</option>`).join("")}</select></label>`;
@@ -155,6 +159,8 @@
     h += `<div class="scene">Trade data (UEX)</div><label class="f"><span>Your UEX app key</span><input class="in" id="s-uex" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key from uexcorp.space" value="${esc(s.uexToken)}"></label>` +
       `<div class="row"><button class="ghost" data-act="saveUex">Save key</button><button class="ghost" data-act="checkUex">Check connection</button></div>${state.check ? `<p class="hint">${esc(state.check)}</p>` : ""}` +
       `<p class="hint">Free from uexcorp.space → API → My Apps. It stays on this PC.</p>`;
+    h += `<div class="scene">Auto location</div><div class="chips"><button class="chip" data-autoloc="1" aria-pressed="${s.autoLocation !== false}">On</button><button class="chip" data-autoloc="0" aria-pressed="${s.autoLocation === false}">Off</button></div>` +
+      `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>`;
     h += `<div class="scene">Other</div><label class="f"><span>Screenshots folder</span><input class="in" id="s-shots" value="${esc(s.shotsFolder)}" spellcheck="false"></label>` +
       `<div class="chips"><button class="chip" data-start="1" aria-pressed="${!!s.startWithWindows}">Start with Windows</button></div>`;
     h += `<div class="scene">Good to know</div><p class="hint">Run Star Citizen in <b>Borderless</b> window mode, or the companion can't appear over it. This app never touches the game: it only draws its own window on top. Unofficial fan project, not affiliated with Cloud Imperium Games.</p>`;
@@ -185,6 +191,7 @@
     if (t.dataset.comm) { state.comm = Number(t.dataset.comm) || t.dataset.comm; render(); $("#view").scrollTop = 0; return; }
     if (t.dataset.hud) { await save({ hud: t.dataset.hud === "1" }); return; }
     if (t.dataset.veil) { await save({ veil: t.dataset.veil }); return; }
+    if (t.dataset.autoloc) { await save({ autoLocation: t.dataset.autoloc === "1" }); return; }
     if (t.dataset.start) { await save({ startWithWindows: !s.startWithWindows }); return; }
     switch (t.dataset.act) {
       case "back": state.comm = null; render(); break;
@@ -232,5 +239,7 @@
   // each time the panel opens: redraw, and swing it out from the screen edge
   api.onShown(() => { render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); });
   api.getSettings().then((s) => { state.settings = s; render(); });
+  // /showlocation picked up: jump to the Light tab so you see where it put you
+  if (api.onLocated) api.onLocated(() => { state.tab = "light"; render(); });
   setInterval(() => { if (state.tab === "light" && !document.hidden) render(); }, 20000);  // keep the countdowns fresh
 })();
