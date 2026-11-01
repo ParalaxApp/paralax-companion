@@ -187,7 +187,7 @@ async function uex(endpoint, params, ttlMin) {
   if (hit && Date.now() - hit.at < (ttlMin || 10) * 60e3) return hit.data;
   if (!settings.uexToken) return { error: "no-token" };
   try {
-    const res = await fetch(`https://api.uexcorp.space/2.0/${endpoint}${q ? "?" + q : ""}`, { headers: { Authorization: "Bearer " + settings.uexToken, Accept: "application/json" } });
+    const res = await fetch(`https://api.uexcorp.uk/2.0/${endpoint}${q ? "?" + q : ""}`, { headers: { Authorization: "Bearer " + settings.uexToken, Accept: "application/json" } });
     const json = await res.json().catch(() => null);
     if (!res.ok || !json) return { error: (json && (json.message || json.status)) || "HTTP " + res.status };
     if (json.status && json.status !== "ok") return { error: json.status };

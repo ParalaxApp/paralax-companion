@@ -158,7 +158,7 @@
     h += `<div class="scene">See-through</div><div class="chips veil">${[["light", "More game"], ["medium", "Balanced"], ["dark", "Easier to read"]].map(([k, l]) => `<button class="chip" data-veil="${k}" aria-pressed="${(s.veil || "medium") === k}">${l}</button>`).join("")}</div>`;
     h += `<div class="scene">Trade data (UEX)</div><label class="f"><span>Your UEX app key</span><input class="in" id="s-uex" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key from uexcorp.space" value="${esc(s.uexToken)}"></label>` +
       `<div class="row"><button class="ghost" data-act="saveUex">Save key</button><button class="ghost" data-act="checkUex">Check connection</button></div>${state.check ? `<p class="hint">${esc(state.check)}</p>` : ""}` +
-      `<p class="hint">Free from uexcorp.space → API → My Apps. It stays on this PC.</p>`;
+      `<p class="hint">Free from uexcorp.space → API → My Apps → create an app, then copy its token. It stays on this PC.</p>`;
     h += `<div class="scene">Auto location</div><div class="chips"><button class="chip" data-autoloc="1" aria-pressed="${s.autoLocation !== false}">On</button><button class="chip" data-autoloc="0" aria-pressed="${s.autoLocation === false}">Off</button></div>` +
       `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>`;
     h += `<div class="scene">Other</div><label class="f"><span>Screenshots folder</span><input class="in" id="s-shots" value="${esc(s.shotsFolder)}" spellcheck="false"></label>` +
