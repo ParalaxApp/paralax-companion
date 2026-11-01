@@ -248,7 +248,53 @@
   /* ---------- start ---------- */
   api.onSettings((s) => { state.settings = { ...state.settings, ...s }; render(); });
   // each time the panel opens: redraw, and swing it out from the screen edge
-  api.onShown(() => { render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); });
+  api.onShown(() => { render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); glitchOpen(p); });
+
+  /* ---------- Opening glitch ----------
+     As the panel opens: blocks of digital noise flash across the glass (drawn on a canvas for 0.65 s),
+     and the labels decode from random characters into the real words. Skipped for people who turn off motion. */
+  const GLYPHS = "01#%&@$<>/\\|=+*?▓▒░█▀▄";
+  let glitchRun = 0;
+  function glitchOpen(panel) {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const run = ++glitchRun, start = performance.now(), DUR = 650;
+    // 1. digital noise blocks
+    const c = document.createElement("canvas"), r = panel.getBoundingClientRect();
+    c.className = "glitch-fx"; c.width = Math.round(r.width); c.height = Math.round(r.height);
+    panel.appendChild(c);
+    const g = c.getContext("2d");
+    const COLS = ["rgba(0,229,255,", "rgba(255,46,99,", "rgba(255,255,255,", "rgba(255,194,26,"];
+    // 2. text decode: only plain-text labels (no markup inside), restored exactly at the end
+    const els = [...panel.querySelectorAll(".scene, #tabs button, .st, .big, .sub, .clk, .ev b, .loc b")].filter((e) => !e.children.length && e.textContent.trim());
+    const orig = els.map((e) => e.textContent);
+    const scramble = (txt, k) => txt.split("").map((ch, i) => ch === " " || i / txt.length < k ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0]).join("");
+    function frame(now) {
+      if (run !== glitchRun) return;
+      const t = Math.min(1, (now - start) / DUR), heat = 1 - t;   // starts strong, fades out
+      g.clearRect(0, 0, c.width, c.height);
+      // tearing bands: a strip of the glass shifted and tinted
+      const bands = Math.round(10 * heat * heat) + 1;
+      for (let i = 0; i < bands; i++) {
+        const y = Math.random() * c.height, h = 2 + Math.random() * 26 * heat;
+        g.fillStyle = COLS[(Math.random() * 3) | 0] + (0.12 + 0.35 * heat) + ")";
+        g.fillRect((Math.random() - 0.5) * 60 * heat, y, c.width, h);
+      }
+      // blocky pixels: square "dead pixels" and data blocks
+      const blocks = Math.round(70 * heat);
+      for (let i = 0; i < blocks; i++) {
+        const s2 = [4, 8, 8, 16, 24][(Math.random() * 5) | 0];
+        g.fillStyle = COLS[(Math.random() * COLS.length) | 0] + (0.25 + 0.6 * Math.random() * heat) + ")";
+        g.fillRect(Math.floor(Math.random() * c.width / s2) * s2, Math.floor(Math.random() * c.height / s2) * s2, s2 * (1 + ((Math.random() * 6) | 0)), s2);
+      }
+      // scanlines over everything
+      g.fillStyle = `rgba(0,0,0,${0.18 * heat})`;
+      for (let y = 0; y < c.height; y += 3) g.fillRect(0, y, c.width, 1);
+      // decode the words, left to right
+      els.forEach((e, i) => { if (e.isConnected) e.textContent = t < 1 ? scramble(orig[i], Math.max(0, (t - 0.15) / 0.75)) : orig[i]; });
+      if (t < 1) requestAnimationFrame(frame); else c.remove();
+    }
+    requestAnimationFrame(frame);
+  }
   api.getSettings().then((s) => { state.settings = s; render(); });
   // /showlocation picked up: jump to the Light tab so you see where it put you
   if (api.onLocated) api.onLocated(() => { state.tab = "light"; render(); });
