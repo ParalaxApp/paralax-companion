@@ -10,7 +10,7 @@
   const $ = (s) => document.querySelector(s);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const api = window.pv || {  // when opened outside the app (for testing), a stand-in that does nothing
-    getSettings: async () => ({ hotkey: "Control+Shift+P", hud: true, hudCorner: "top-right", system: "Stanton", body: "Hurston", place: "Lorville", alertMins: 5, uexToken: "", hotkeyOk: true, version: "dev" }),
+    getSettings: async () => ({ hotkey: "Insert", hud: true, hudCorner: "top-right", system: "Stanton", body: "Hurston", place: "Lorville", alertMins: 5, uexToken: "", hotkeyOk: true, version: "dev" }),
     setSettings: async (p) => Object.assign(state.settings, p), uex: async () => ({ error: "no-token" }), open: async (u) => window.open(u), openFolder: async () => {}, hide: async () => {}, pauseHotkey: async () => {}, onSettings: () => {}, onShown: () => {}
   };
 
@@ -150,7 +150,7 @@
   function viewSettings() {
     const s = state.settings;
     let h = `<div class="scene">Hotkey</div><div class="row"><span class="hk${state.recording ? " rec" : ""}">${state.recording ? "Press your keys…" : esc(s.hotkey.replace(/\+/g, " + "))}</span><button class="ghost" data-act="rec" style="flex:0 0 auto">${state.recording ? "Cancel" : "Change"}</button></div>` +
-      (s.hotkeyOk ? `<p class="hint">Press it in game to show or hide this panel. Pick keys Star Citizen doesn't use.</p>` : `<p class="err">That hotkey is already used by something else. Pick another.</p>`);
+      (s.hotkeyOk ? `<p class="hint">Press it in game to show or hide this panel. A single key works best (like Insert or Home): Ctrl, Shift and Alt are crouch, sprint and more in Star Citizen.</p>` : `<p class="err">That hotkey is already used by something else. Pick another.</p>`);
     h += `<div class="scene">Light strip</div><div class="chips"><button class="chip" data-hud="1" aria-pressed="${!!s.hud}">On</button><button class="chip" data-hud="0" aria-pressed="${!s.hud}">Off</button></div>` +
       `<label class="f"><span>Corner</span><select class="in" id="s-corner">${["top-right", "top-left", "bottom-right", "bottom-left"].map((c) => `<option value="${c}"${s.hudCorner === c ? " selected" : ""}>${c.replace("-", " ")}</option>`).join("")}</select></label>` +
       `<label class="f"><span>Warn me before golden hour (minutes)</span><input class="in" id="s-alert" type="number" min="0" max="60" value="${esc(s.alertMins)}"></label>`;

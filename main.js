@@ -14,7 +14,7 @@ const fs = require("fs");
 
 // ---------- Settings (saved in the app's own folder on the PC) ----------
 const DEFAULTS = {
-  hotkey: "Control+Shift+P",   // shows / hides the panel
+  hotkey: "Insert",            // shows / hides the panel (one key, no Ctrl/Shift: those are crouch and sprint in game)
   hud: true,                   // the small light strip in the corner
   hudCorner: "top-right",
   veil: "medium",              // how see-through the panel is: light, medium or dark
@@ -28,7 +28,10 @@ const DEFAULTS = {
 };
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
 let settings = { ...DEFAULTS };
-function loadSettings() { try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(settingsFile(), "utf8")) }; } catch (e) { settings = { ...DEFAULTS }; } }
+function loadSettings() {
+  try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(settingsFile(), "utf8")) }; } catch (e) { settings = { ...DEFAULTS }; }
+  if (settings.hotkey === "Control+Shift+P") settings.hotkey = DEFAULTS.hotkey;   // the old default clashed with crouch
+}
 function saveSettings() { try { fs.mkdirSync(path.dirname(settingsFile()), { recursive: true }); fs.writeFileSync(settingsFile(), JSON.stringify(settings, null, 2)); } catch (e) { console.error(e); } }
 
 let panel = null, hud = null, tray = null, hotkeyOk = true;
