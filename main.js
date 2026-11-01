@@ -24,6 +24,8 @@ const DEFAULTS = {
   shotsFolder: "C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\ScreenShots",
   startWithWindows: false,
   autoLocation: true,          // follow /showlocation from the game (via the clipboard)
+  shareFeedback: true,         // anonymous feedback data: version + Windows/Linux + "opened", nothing else
+  installId: "",               // a random ID made on this PC, so one person opening it 10 times counts once
   lastLocation: null           // { text, at, kind } the last place /showlocation told us
 };
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
@@ -227,6 +229,23 @@ function watchClipboard() {
   }, 1000);
 }
 
+// ---------- Anonymous feedback data ----------
+// When the companion opens (and every 6 hours while it runs) it tells paralaxverse.com: "a copy of version X
+// is in use on Windows/Linux", with a random ID made on this PC. Nothing about the person, their account or
+// their game. It helps us see how many people use it and which versions are out there. Off switch in Settings.
+const SUPABASE_URL = "https://hiqbxmvhqaqhpyixmvqx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_xEpHsvE-JsCbfoIR60M-zg_69nM8kr4";   // the site's public key (read-only by design)
+function sendFeedback() {
+  if (!settings.shareFeedback) return;
+  if (!settings.installId) { settings.installId = require("crypto").randomUUID(); saveSettings(); }
+  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux";
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/companion_ping`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_id: settings.installId, p_version: app.getVersion(), p_os: os })
+  }).catch(() => { /* offline: no problem */ });
+}
+
 // ---------- Messages from the windows ----------
 ipcMain.handle("settings:get", () => ({ ...settings, hotkeyOk, version: app.getVersion() }));
 ipcMain.handle("settings:set", (e, patch) => {
@@ -255,6 +274,7 @@ const ready = () => process.platform === "linux" ? new Promise((r) => setTimeout
 app.whenReady().then(ready).then(() => {
   loadSettings();
   createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard();
+  sendFeedback(); setInterval(sendFeedback, 6 * 3600e3);
   togglePanel(true);  // show it once at start, so people know it's running
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());

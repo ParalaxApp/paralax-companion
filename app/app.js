@@ -161,6 +161,8 @@
       `<p class="hint">Free from uexcorp.space → API → My Apps → create an app, then copy its token. It stays on this PC.</p>`;
     h += `<div class="scene">Auto location</div><div class="chips"><button class="chip" data-autoloc="1" aria-pressed="${s.autoLocation !== false}">On</button><button class="chip" data-autoloc="0" aria-pressed="${s.autoLocation === false}">Off</button></div>` +
       `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>`;
+    h += `<div class="scene">Help improve the Companion</div><div class="chips"><button class="chip" data-feedback="1" aria-pressed="${s.shareFeedback !== false}">On</button><button class="chip" data-feedback="0" aria-pressed="${s.shareFeedback === false}">Off</button></div>` +
+      `<p class="hint">Shares a little anonymous feedback data, like which version you're on and how often the Companion gets opened, so we can see what's working and what to build next. It's never linked to you or your account, and nothing from your game is ever sent.</p>`;
     h += `<div class="scene">Other</div><label class="f"><span>Screenshots folder</span><input class="in" id="s-shots" value="${esc(s.shotsFolder)}" spellcheck="false"></label>` +
       `<div class="chips"><button class="chip" data-start="1" aria-pressed="${!!s.startWithWindows}">Start with Windows</button></div>`;
     h += `<div class="scene">Good to know</div><p class="hint">Run Star Citizen in <b>Borderless</b> window mode, or the companion can't appear over it. This app never touches the game: it only draws its own window on top. Unofficial fan project, not affiliated with Cloud Imperium Games.</p>`;
@@ -192,6 +194,7 @@
     if (t.dataset.hud) { await save({ hud: t.dataset.hud === "1" }); return; }
     if (t.dataset.veil) { await save({ veil: t.dataset.veil }); return; }
     if (t.dataset.autoloc) { await save({ autoLocation: t.dataset.autoloc === "1" }); return; }
+    if (t.dataset.feedback) { await save({ shareFeedback: t.dataset.feedback === "1" }); return; }
     if (t.dataset.start) { await save({ startWithWindows: !s.startWithWindows }); return; }
     switch (t.dataset.act) {
       case "back": state.comm = null; render(); break;
