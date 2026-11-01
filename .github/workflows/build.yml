@@ -27,6 +27,26 @@ jobs:
           name: Paralax-Verse-Companion-installer
           path: dist/*.exe
           retention-days: 14
+      # Publish each NEW version (when package.json's version changes) to the public download repository,
+      # where paralaxverse.com/companion/download points. The code itself stays private.
+      - name: Publish new version for download
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "No RELEASE_TOKEN secret yet, skipping"; exit 0; fi
+          REPO=ParalaxApp/paralax-companion-download
+          VER=$(node -p "require('./package.json').version")
+          # the download repository needs a first file before it can hold releases
+          if ! gh api repos/$REPO/contents/README.md >/dev/null 2>&1; then
+            printf '# Paralax Verse Companion\n\nDownloads for the Paralax Verse Companion, a free, unofficial Star Citizen fan app.\nGet it at https://paralaxverse.com/companion\n' > /tmp/readme.md
+            gh api -X PUT repos/$REPO/contents/README.md -f message="Downloads" -f content="$(base64 -w0 /tmp/readme.md)"
+          fi
+          if gh release view "v$VER" --repo $REPO >/dev/null 2>&1; then echo "v$VER is already published"; exit 0; fi
+          cp dist/*.exe "dist/Paralax-Verse-Companion-Setup.exe"
+          gh release create "v$VER" "dist/Paralax-Verse-Companion-Setup.exe" --repo $REPO --title "Paralax Verse Companion $VER" \
+            --notes "Free, unofficial Star Citizen companion from paralaxverse.com. Windows 10 and 11. Not affiliated with Cloud Imperium Games." --latest
       - name: Make a release (version tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
