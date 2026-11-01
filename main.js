@@ -249,7 +249,10 @@ ipcMain.handle("panel:pauseHotkey", (e, on) => { hookPaused = !!on; if (on) glob
 // ---------- Start ----------
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on("second-instance", () => togglePanel(true));
-app.whenReady().then(() => {
+// Linux: see-through windows need this switch, and the desktop needs a moment before they're made
+if (process.platform === "linux") { app.commandLine.appendSwitch("enable-transparent-visuals"); app.disableHardwareAcceleration(); }
+const ready = () => process.platform === "linux" ? new Promise((r) => setTimeout(r, 400)) : Promise.resolve();
+app.whenReady().then(ready).then(() => {
   loadSettings();
   createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard();
   togglePanel(true);  // show it once at start, so people know it's running
