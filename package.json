@@ -1,7 +1,7 @@
 {
   "name": "paralax-companion",
   "productName": "Paralax Verse Companion",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "An in-game companion overlay for Star Citizen, from Paralax Verse. Unofficial fan project.",
   "main": "main.js",
   "author": "Paralax Verse",
@@ -38,10 +38,12 @@
       "artifactName": "Paralax-Verse-Companion-Setup-${version}.${ext}"
     },
     "asarUnpack": [
-      "node_modules/uiohook-napi/**"
+      "node_modules/uiohook-napi/**",
+      "node_modules/koffi/**"
     ]
   },
   "dependencies": {
-    "uiohook-napi": "1.5.4"
+    "uiohook-napi": "1.5.4",
+    "koffi": "^2.9.0"
   }
 }

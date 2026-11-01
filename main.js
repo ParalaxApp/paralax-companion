@@ -48,11 +48,53 @@ function createPanel() {
   panel.loadFile(path.join(__dirname, "app", "index.html"));
   panel.on("close", (e) => { if (!app.isQuitting) { e.preventDefault(); panel.hide(); } });  // closing just hides it
 }
+// ---------- Bringing the panel to the front ----------
+// Windows doesn't let an app jump in front of a game by itself, so the panel used to appear without a mouse cursor
+// or keyboard. These standard Windows calls (the same ones launchers and overlays use) bring it properly to the front;
+// the game then lets go of the mouse. When the panel hides, the game is put back in front.
+// Nothing is sent to the game: no key presses, no clicks.
+let win32 = null, gameWindow = null;
+function loadWin32() {
+  if (win32 !== null || process.platform !== "win32") return win32;
+  try {
+    const koffi = require("koffi");
+    const u = koffi.load("user32.dll"), k = koffi.load("kernel32.dll");
+    win32 = {
+      GetForegroundWindow: u.func("uintptr_t __stdcall GetForegroundWindow()"),
+      GetWindowThreadProcessId: u.func("uint32_t __stdcall GetWindowThreadProcessId(uintptr_t, void *)"),
+      AttachThreadInput: u.func("bool __stdcall AttachThreadInput(uint32_t, uint32_t, bool)"),
+      SetForegroundWindow: u.func("bool __stdcall SetForegroundWindow(uintptr_t)"),
+      BringWindowToTop: u.func("bool __stdcall BringWindowToTop(uintptr_t)"),
+      IsWindow: u.func("bool __stdcall IsWindow(uintptr_t)"),
+      GetCurrentThreadId: k.func("uint32_t __stdcall GetCurrentThreadId()")
+    };
+  } catch (e) { console.error("can't load Windows helpers", e); win32 = false; }
+  return win32;
+}
+const handleOf = (w) => { const b = w.getNativeWindowHandle(); return b.length >= 8 ? b.readBigUInt64LE(0) : BigInt(b.readUInt32LE(0)); };
+function bringToFront(target) {   // target: a window handle
+  const w = loadWin32(); if (!w || !target) return false;
+  try {
+    const fg = w.GetForegroundWindow();
+    const fgThread = fg ? w.GetWindowThreadProcessId(fg, null) : 0, me = w.GetCurrentThreadId();
+    const attach = fgThread && fgThread !== me && w.AttachThreadInput(fgThread, me, true);   // share input with the front app for a moment
+    w.BringWindowToTop(target); const ok = w.SetForegroundWindow(target);
+    if (attach) w.AttachThreadInput(fgThread, me, false);
+    return ok;
+  } catch (e) { console.error(e); return false; }
+}
 function togglePanel(force) {
   if (!panel) return;
   const show = force === undefined ? !panel.isVisible() : force;
-  if (show) { panel.show(); panel.focus(); panel.webContents.send("shown"); }
-  else panel.hide();   // Windows hands the keyboard back to the game
+  if (show) {
+    const w = loadWin32(), mine = handleOf(panel);
+    if (w) { const fg = w.GetForegroundWindow(); if (fg && fg !== mine && fg !== handleOf(hud)) gameWindow = fg; }   // remember the game, to give it back later
+    panel.show(); bringToFront(mine); panel.focus(); panel.webContents.send("shown");
+  } else {
+    panel.hide();
+    const w = loadWin32();   // hand the game its mouse and keyboard back
+    if (w && gameWindow && w.IsWindow(gameWindow)) bringToFront(gameWindow);
+  }
   // The panel already shows the light, so the corner strip steps aside while it's open (they'd overlap otherwise)
   if (hud && !hud.isDestroyed()) { if (show) hud.hide(); else if (settings.hud) hud.showInactive(); }
 }
@@ -99,8 +141,11 @@ function startKeyListener() {
   try { hook = require("uiohook-napi"); } catch (e) { console.error("keyboard listener not available", e); return; }
   const { uIOhook, UiohookKey } = hook;
   const NAMES = { Up: "ArrowUp", Down: "ArrowDown", Left: "ArrowLeft", Right: "ArrowRight", Space: "Space", Insert: "Insert", Delete: "Delete", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown" };
+  const NAV = { [UiohookKey.ArrowLeft]: "left", [UiohookKey.ArrowRight]: "right", [UiohookKey.ArrowUp]: "up", [UiohookKey.ArrowDown]: "down" };
   uIOhook.on("keydown", (e) => {
     if (hookPaused) return;
+    // backup: panel open but Windows kept the game in front -> arrow keys still move the panel
+    if (NAV[e.keycode] && panel && panel.isVisible() && !panel.isFocused()) panel.webContents.send("nav", NAV[e.keycode]);
     const h = parseHotkey(settings.hotkey), code = UiohookKey[NAMES[h.key] || h.key];
     if (code === undefined || e.keycode !== code) return;
     if (!!e.ctrlKey === h.ctrl && !!e.altKey === h.alt && !!e.shiftKey === h.shift) toggleOnce();

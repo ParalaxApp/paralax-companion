@@ -233,13 +233,16 @@
     if (e.key === "Escape") api.hide();
     // no mouse needed: ← → change tab, ↑ ↓ scroll (not while typing in a box)
     if (/INPUT|SELECT|TEXTAREA/.test((e.target && e.target.tagName) || "")) return;
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-      e.preventDefault();
-      const i = TABS.findIndex(([k]) => k === state.tab), n = TABS.length;
-      state.tab = TABS[(i + (e.key === "ArrowRight" ? 1 : -1) + n) % n][0]; state.err = ""; render();
-    }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); $("#view").scrollBy({ top: e.key === "ArrowDown" ? 120 : -120, behavior: "smooth" }); }
+    const d = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" }[e.key];
+    if (d) { e.preventDefault(); nav(d); }
   });
+  function nav(d) {
+    if (d === "left" || d === "right") {
+      const i = TABS.findIndex(([k]) => k === state.tab), n = TABS.length;
+      state.tab = TABS[(i + (d === "right" ? 1 : -1) + n) % n][0]; state.err = ""; render();
+    } else $("#view").scrollBy({ top: d === "down" ? 120 : -120, behavior: "smooth" });
+  }
+  if (api.onNav) api.onNav(nav);   // arrow keys heard by the companion while the game stays in front
   async function save(patch) { state.settings = await api.setSettings(patch); render(); }
 
   /* ---------- start ---------- */

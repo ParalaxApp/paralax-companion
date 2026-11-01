@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld("pv", {
   pauseHotkey: (on) => ipcRenderer.invoke("panel:pauseHotkey", on),
   onSettings: (fn) => ipcRenderer.on("settings", (e, s) => fn(s)),
   onShown: (fn) => ipcRenderer.on("shown", () => fn()),
-  onLocated: (fn) => ipcRenderer.on("located", (e, r) => fn(r))
+  onLocated: (fn) => ipcRenderer.on("located", (e, r) => fn(r)),
+  onNav: (fn) => ipcRenderer.on("nav", (e, d) => fn(d))
 });
