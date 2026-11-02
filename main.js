@@ -10,9 +10,21 @@
 // Privacy (0.6.3): the keyboard listener and the clipboard check ONLY run while Star Citizen is running.
 // When the game isn't running, both are switched off completely (the normal Windows hotkey still opens the panel).
 
-const { app, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, shell, screen, nativeImage, clipboard } = require("electron");
+const { app, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, shell, screen, nativeImage, clipboard, safeStorage, Notification, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { pathToFileURL } = require("url");
+
+// ---------- Locking the windows down ----------
+// The app's windows can only ever show the app's own pages: no opening new windows, no following links inside
+// them, no loading a dropped file, and no asking for the camera, microphone, location and so on.
+app.on("web-contents-created", (_e, wc) => {
+  wc.setWindowOpenHandler(() => ({ action: "deny" }));
+  wc.on("will-navigate", (e) => e.preventDefault());
+  wc.on("will-attach-webview", (e) => e.preventDefault());
+});
+const APP_URL = pathToFileURL(path.join(__dirname, "app")).href + "/";
+const fromApp = (e) => { try { return !!(e.senderFrame && e.senderFrame.url.startsWith(APP_URL)); } catch (er) { return false; } };
 
 // ---------- Settings (saved in the app's own folder on the PC) ----------
 const DEFAULTS = {
@@ -26,17 +38,57 @@ const DEFAULTS = {
   shotsFolder: "C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\ScreenShots",
   startWithWindows: false,
   autoLocation: true,          // follow /showlocation from the game (via the clipboard)
-  shareFeedback: true,         // anonymous feedback data: version + Windows/Linux + "opened", nothing else
+  shareFeedback: null,         // anonymous feedback data: version + Windows/Linux + "opened". null = not asked yet, so nothing is sent
   installId: "",               // a random ID made on this PC, so one person opening it 10 times counts once
-  lastLocation: null           // { text, at, kind } the last place /showlocation told us
+  lastLocation: null,          // { text, at, kind } the last place /showlocation told us
+  feedbackAskedV2: false       // internal: we've reset the usage-data question for 0.7.0
 };
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
 let settings = { ...DEFAULTS };
+// The UEX key is never written to disk as plain text: it's locked with Windows' own encryption (DPAPI, tied to
+// your Windows account) and saved as "uexTokenEnc". Only this app, running as you, can unlock it.
+// On Linux it uses the desktop's keyring. If there's no real keyring, the key is NOT saved at all: it only lasts
+// until the app closes (Settings says so).
+const canEncrypt = () => {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    if (process.platform === "linux" && typeof safeStorage.getSelectedStorageBackend === "function") {
+      const b = safeStorage.getSelectedStorageBackend();
+      if (b === "basic_text" || b === "unknown") return false;   // no real keyring: don't pretend it's locked
+    }
+    return true;
+  } catch (e) { return false; }
+};
+let keptEnc = null;   // a saved key we couldn't unlock right now (keyring not ready): kept as it is, never thrown away
 function loadSettings() {
-  try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(settingsFile(), "utf8")) }; } catch (e) { settings = { ...DEFAULTS }; }
+  let raw = {};
+  try { raw = JSON.parse(fs.readFileSync(settingsFile(), "utf8")); } catch (e) { raw = {}; }
+  settings = { ...DEFAULTS, ...raw };
+  delete settings.uexTokenEnc;
+  if (raw.uexTokenEnc) {
+    settings.uexToken = "";
+    try { if (canEncrypt()) settings.uexToken = safeStorage.decryptString(Buffer.from(raw.uexTokenEnc, "base64")); } catch (e) { settings.uexToken = ""; }
+    if (!settings.uexToken) keptEnc = raw.uexTokenEnc;
+  }
   if (settings.hotkey === "Control+Shift+P") settings.hotkey = DEFAULTS.hotkey;   // the old default clashed with crouch
+  // 0.7.0: older versions sent usage data without asking first. Everyone gets asked once now.
+  // Anyone who'd already said no stays a no. A new random ID is made, so new data can't be linked to the old.
+  if (!raw.feedbackAskedV2) { if (raw.shareFeedback !== false) settings.shareFeedback = null; settings.installId = ""; settings.feedbackAskedV2 = true; }
+  // 0.7.0: older versions kept a log of /showlocation readings. Not needed any more, so it's removed.
+  try { fs.unlinkSync(path.join(app.getPath("userData"), "locations.log")); } catch (e) { /* not there */ }
+  saveSettings();   // re-saves straight away, so an old plain-text key gets locked (or removed, if it can't be locked)
 }
-function saveSettings() { try { fs.mkdirSync(path.dirname(settingsFile()), { recursive: true }); fs.writeFileSync(settingsFile(), JSON.stringify(settings, null, 2)); } catch (e) { console.error(e); } }
+function saveSettings() {
+  const out = { ...settings };
+  delete out.uexToken;                                   // the plain key is never written
+  try {
+    if (settings.uexToken && canEncrypt()) { out.uexTokenEnc = safeStorage.encryptString(settings.uexToken).toString("base64"); keptEnc = null; }
+    else if (!settings.uexToken && keptEnc) out.uexTokenEnc = keptEnc;   // couldn't unlock it this time: keep it for next time
+  } catch (e) { console.error(e); if (keptEnc) out.uexTokenEnc = keptEnc; }
+  try { fs.mkdirSync(path.dirname(settingsFile()), { recursive: true }); fs.writeFileSync(settingsFile(), JSON.stringify(out, null, 2)); } catch (e) { console.error(e); }
+}
+// What the windows are allowed to see: everything except the UEX key itself (they only need to know there is one)
+function publicSettings() { const p = { ...settings, hotkeyOk, gameRunning, hasUex: !!settings.uexToken, tokenLocked: canEncrypt(), tokenStuck: !settings.uexToken && !!keptEnc, update: latest, version: app.getVersion() }; delete p.uexToken; return p; }
 
 let panel = null, hud = null, tray = null, hotkeyOk = true;
 
@@ -169,6 +221,7 @@ function setKeyListener(on) {
 }
 function registerHotkey() {
   globalShortcut.unregisterAll();
+  if (hookPaused) return;   // picking a new hotkey right now
   try { hotkeyOk = globalShortcut.register(settings.hotkey, () => toggleOnce()); } catch (e) { hotkeyOk = false; }
   if (!hotkeyOk && keyHook) hotkeyOk = true;   // the keyboard listener still hears it, even if Windows says it's taken
   if (tray) tray.setToolTip(`Paralax Verse Companion · ${hotkeyOk ? settings.hotkey + " to open" : "hotkey not available, pick another in Settings"}${gameRunning ? " · Star Citizen running" : ""}`);
@@ -188,7 +241,7 @@ function createTray() {
   tray.on("click", () => togglePanel());
   tray.on("right-click", () => tray.setContextMenu(menu()));
 }
-function broadcast() { [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("settings", { ...settings, hotkeyOk, gameRunning })); }
+function broadcast() { [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("settings", publicSettings())); }
 
 // ---------- Trade data from UEX (fetched here, not in the window, and kept for a while to go easy on their servers) ----------
 const cache = new Map();
@@ -196,7 +249,8 @@ async function uex(endpoint, params, ttlMin) {
   if (!/^[a-z_]+$/.test(endpoint)) return { error: "bad request" };
   const q = new URLSearchParams(params || {}).toString();
   const key = endpoint + "?" + q, hit = cache.get(key);
-  if (hit && Date.now() - hit.at < (ttlMin || 10) * 60e3) return hit.data;
+  const ttl = Number.isFinite(ttlMin) ? Math.max(0, Math.min(ttlMin, 1440)) : 10;   // minutes (0 = fresh)
+  if (hit && Date.now() - hit.at < ttl * 60e3) return hit.data;
   if (!settings.uexToken) return { error: "no-token" };
   try {
     const res = await fetch(`https://api.uexcorp.uk/2.0/${endpoint}${q ? "?" + q : ""}`, { headers: { Authorization: "Bearer " + settings.uexToken, Accept: "application/json" } });
@@ -220,9 +274,6 @@ require("./app/dn.js"); require("./app/geo.js"); require("./app/locate.js");
 const LOC = global.window.LOC;
 let lastClip = null;   // fingerprint of the clipboard last time we looked (never the text itself)
 const fingerprint = (t) => require("crypto").createHash("sha256").update(t).digest("hex");
-function logLocation(line) {   // a small local log of /showlocation readings, to help fix any wrong guesses
-  try { fs.appendFileSync(path.join(app.getPath("userData"), "locations.log"), line + "\n"); } catch (e) { /* ignore */ }
-}
 function watchClipboard() {
   setInterval(() => {
     if (!settings.autoLocation || !gameRunning) { lastClip = null; return; }   // game closed: don't look at all
@@ -235,7 +286,6 @@ function watchClipboard() {
     text = "";                                   // done with it: only the three numbers (if it was a /showlocation line) are kept
     if (!xyz) return;
     const at = Date.now(), r = LOC.locate(xyz, at);
-    logLocation(`${new Date(at).toISOString()}\t${xyz.join(" ")}\t${r ? r.text : "unknown"}`);
     const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
     if (r) { settings.system = r.system; settings.body = r.body; if (r.place) settings.place = r.place; }
     settings.lastLocation = found;
@@ -272,6 +322,24 @@ async function watchGame() {
   setTimeout(watchGame, 5000);
 }
 
+// ---------- New version check ----------
+// Once at start and every 6 hours: asks GitHub for the newest public release (just its version number).
+// If there's a newer one, the panel shows a "new version" bar and Windows shows one notification.
+let latest = null;
+const newer = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+async function checkUpdate() {
+  try {
+    const res = await fetch("https://api.github.com/repos/ParalaxApp/paralax-companion-download/releases/latest", { headers: { Accept: "application/vnd.github+json", "User-Agent": "Paralax-Verse-Companion" } });
+    if (!res.ok) return;
+    const tag = String((await res.json()).tag_name || "").replace(/^v/, "");
+    if (!/^\d+\.\d+\.\d+$/.test(tag) || !newer(tag, app.getVersion())) return;
+    if (latest !== tag) {
+      latest = tag; broadcast();
+      try { if (Notification.isSupported()) { const n = new Notification({ title: "Paralax Verse Companion", body: `Version ${tag} is out. Click to download it.` }); n.on("click", () => shell.openExternal("https://paralaxverse.com/companion")); n.show(); } } catch (e) { /* ignore */ }
+    }
+  } catch (e) { /* offline: try again later */ }
+}
+
 // ---------- Anonymous feedback data ----------
 // When the companion opens (and every 6 hours while it runs) it tells paralaxverse.com: "a copy of version X
 // is in use on Windows/Linux", with a random ID made on this PC. Nothing about the person, their account or
@@ -279,7 +347,7 @@ async function watchGame() {
 const SUPABASE_URL = "https://hiqbxmvhqaqhpyixmvqx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_xEpHsvE-JsCbfoIR60M-zg_69nM8kr4";   // the site's public key (read-only by design)
 function sendFeedback() {
-  if (!settings.shareFeedback) return;
+  if (settings.shareFeedback !== true) return;   // only if the person said yes
   if (!settings.installId) { settings.installId = require("crypto").randomUUID(); saveSettings(); }
   const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux";
   fetch(`${SUPABASE_URL}/rest/v1/rpc/companion_ping`, {
@@ -290,34 +358,55 @@ function sendFeedback() {
 }
 
 // ---------- Messages from the windows ----------
-ipcMain.handle("settings:get", () => ({ ...settings, hotkeyOk, gameRunning, version: app.getVersion() }));
-ipcMain.handle("settings:set", (e, patch) => {
-  const allowed = Object.keys(DEFAULTS);
-  for (const k of Object.keys(patch || {})) if (allowed.includes(k)) settings[k] = patch[k];
+// Every request from a window is checked: it must come from one of the app's own pages
+const handle = (name, fn) => ipcMain.handle(name, (e, ...args) => fromApp(e) ? fn(e, ...args) : undefined);
+handle("settings:get", () => publicSettings());
+handle("settings:set", (e, patch) => {
+  if (!patch || typeof patch !== "object") return publicSettings();
+  const allowed = Object.keys(DEFAULTS).filter((k) => !["installId", "feedbackAskedV2", "lastLocation"].includes(k));
+  for (const k of Object.keys(patch || {})) {
+    if (!allowed.includes(k)) continue;
+    const v = patch[k], d = DEFAULTS[k];
+    if (k === "shareFeedback") { if (v === true || v === false) settings[k] = v; continue; }   // only a real yes or no
+    if (d !== null && typeof v !== typeof d) continue;                                          // wrong kind of value: ignore
+    if (typeof v === "string" && v.length > 300) continue;
+    if (k === "shotsFolder" && /^(\\\\|\/\/)/.test(v)) continue;   // no network paths (\\server\share): Windows would try to sign in to them
+    settings[k] = v;
+  }
   saveSettings();
   if ("hotkey" in patch) registerHotkey();
   if ("hud" in patch || "hudCorner" in patch) updateHud();
   if ("startWithWindows" in patch) app.setLoginItemSettings({ openAtLogin: !!settings.startWithWindows });
   if ("uexToken" in patch) cache.clear();
+  if (patch.shareFeedback === true) sendFeedback();
   broadcast();
-  return { ...settings, hotkeyOk };
+  return publicSettings();
 });
-ipcMain.handle("uex", (e, endpoint, params, ttl) => uex(endpoint, params, ttl));
-ipcMain.handle("open", (e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
-ipcMain.handle("openFolder", () => shell.openPath(settings.shotsFolder));
-ipcMain.handle("panel:hide", () => togglePanel(false));
-ipcMain.handle("panel:pauseHotkey", (e, on) => { hookPaused = !!on; if (on) globalShortcut.unregisterAll(); else registerHotkey(); });  // while picking a new hotkey
+handle("uex", (e, endpoint, params, ttl) => uex(endpoint, params, ttl));
+// Links only open if they go to one of these sites (so nothing can make the app open anything else)
+const LINK_HOSTS = ["paralaxverse.com", "uexcorp.space", "robertsspaceindustries.com", "github.com"];
+handle("open", (e, url) => {
+  try { const u = new URL(url); if (u.protocol === "https:" && LINK_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith("." + h))) shell.openExternal(u.href); } catch (er) { /* not a link */ }
+});
+// Only ever opens a FOLDER (never a file), so a mistyped path can't run a program
+handle("openFolder", () => { try { if (fs.statSync(settings.shotsFolder).isDirectory()) return shell.openPath(settings.shotsFolder); } catch (e) { /* not there */ } return "not found"; });
+handle("panel:hide", () => togglePanel(false));
+handle("panel:pauseHotkey", (e, on) => { hookPaused = !!on; if (on) globalShortcut.unregisterAll(); else registerHotkey(); });  // while picking a new hotkey
 
 // ---------- Start ----------
-if (!app.requestSingleInstanceLock()) app.quit();
+const firstCopy = app.requestSingleInstanceLock();
+if (!firstCopy) app.exit(0);   // already running: this second copy stops straight away and does nothing else
+if (process.platform === "win32") app.setAppUserModelId("com.paralaxverse.companion");   // so Windows notifications show our name
 app.on("second-instance", () => togglePanel(true));
 // Linux: see-through windows need this switch, and the desktop needs a moment before they're made
 if (process.platform === "linux") { app.commandLine.appendSwitch("enable-transparent-visuals"); app.disableHardwareAcceleration(); }
 const ready = () => process.platform === "linux" ? new Promise((r) => setTimeout(r, 400)) : Promise.resolve();
-app.whenReady().then(ready).then(() => {
+if (firstCopy) app.whenReady().then(ready).then(() => {
+  session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));   // never camera, mic, location...
   loadSettings();
   createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard(); watchGame();
   sendFeedback(); setInterval(sendFeedback, 6 * 3600e3);
+  checkUpdate(); setInterval(checkUpdate, 6 * 3600e3);
   togglePanel(true);  // show it once at start, so people know it's running
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());

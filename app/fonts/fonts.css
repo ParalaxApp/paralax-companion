@@ -1,0 +1,9 @@
+/* Bundled fonts (no Google Fonts: nothing is fetched from the internet to draw text) */
+@font-face{font-family:'Barlow Condensed';font-weight:600;font-style:normal;font-display:swap;src:url(barlow-600.woff) format('woff')}
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-style:normal;font-display:swap;src:url(barlow-700.woff) format('woff')}
+@font-face{font-family:'Barlow Condensed';font-weight:800;font-style:normal;font-display:swap;src:url(barlow-800.woff) format('woff')}
+@font-face{font-family:'Barlow Condensed';font-weight:900;font-style:normal;font-display:swap;src:url(barlow-900.woff) format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-weight:400;font-style:normal;font-display:swap;src:url(plexmono-400.woff) format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-weight:500;font-style:normal;font-display:swap;src:url(plexmono-500.woff) format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-weight:600;font-style:normal;font-display:swap;src:url(plexmono-600.woff) format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-weight:100 700;font-style:normal;font-display:swap;src:url(plexsans-var.woff) format('woff')}

@@ -15,8 +15,9 @@
     "dist": "electron-builder --win nsis --publish never"
   },
   "devDependencies": {
-    "electron": "33.2.1",
-    "electron-builder": "25.1.8"
+    "electron": "45.2.1",
+    "electron-builder": "25.1.8",
+    "@electron/fuses": "1.8.0"
   },
   "build": {
     "appId": "com.paralaxverse.companion",
@@ -50,10 +51,11 @@
       "icon": "build/icon.png",
       "artifactName": "Paralax-Verse-Companion-${version}.${ext}",
       "synopsis": "Unofficial Star Citizen companion overlay"
-    }
+    },
+    "afterPack": "build/fuses.js"
   },
   "dependencies": {
     "uiohook-napi": "1.5.4",
-    "koffi": "^2.9.0"
+    "koffi": "2.16.3"
   }
 }

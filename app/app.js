@@ -156,17 +156,30 @@
       `<label class="f"><span>Warn me before golden hour (minutes)</span><input class="in" id="s-alert" type="number" min="0" max="60" value="${esc(s.alertMins)}"></label>`;
     // how much of the game shows through the panel
     h += `<div class="scene">See-through</div><div class="chips veil">${[["light", "More game"], ["medium", "Balanced"], ["dark", "Easier to read"]].map(([k, l]) => `<button class="chip" data-veil="${k}" aria-pressed="${(s.veil || "medium") === k}">${l}</button>`).join("")}</div>`;
-    h += `<div class="scene">Trade data (UEX)</div><label class="f"><span>Your UEX app key</span><input class="in" id="s-uex" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key from uexcorp.space" value="${esc(s.uexToken)}"></label>` +
+    h += `<div class="scene">Trade data (UEX)</div><label class="f"><span>Your UEX app key</span><input class="in" id="s-uex" type="password" autocomplete="off" spellcheck="false" placeholder="${s.hasUex ? "Key saved and locked. Paste a new one to replace it" : "Paste your key from uexcorp.space"}" value=""></label>` +
       `<div class="row"><button class="ghost" data-act="saveUex">Save key</button><button class="ghost" data-act="checkUex">Check connection</button></div>${state.check ? `<p class="hint">${esc(state.check)}</p>` : ""}` +
-      `<p class="hint">Free from uexcorp.space → API → My Apps → create an app, then copy its token. It stays on this PC.</p>`;
+      `<p class="hint">Free from uexcorp.space → API → My Apps → create an app, then copy its token. ${s.tokenLocked === false ? "This PC has no keyring to lock it with, so the key is only kept until the Companion closes (it's never saved as plain text)." : "It stays on this PC, locked with your system's own encryption."}${s.tokenStuck ? " Your saved key couldn't be unlocked right now (is your keyring unlocked?). It's kept safe and will work next time." : ""}</p>` + (s.hasUex ? `<div class="row"><button class="ghost" data-act="clearUex">Remove key</button></div>` : "");
     h += `<div class="scene">Auto location</div><div class="chips"><button class="chip" data-autoloc="1" aria-pressed="${s.autoLocation !== false}">On</button><button class="chip" data-autoloc="0" aria-pressed="${s.autoLocation === false}">Off</button></div>` +
       `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>` +
       `<p class="hint">The clipboard check and the in-game hotkey listener only run while Star Citizen is running${s.gameRunning ? " (it is now)" : " (it isn't now, so both are off)"}.</p>`;
-    h += `<div class="scene">Help improve the Companion</div><div class="chips"><button class="chip" data-feedback="1" aria-pressed="${s.shareFeedback !== false}">On</button><button class="chip" data-feedback="0" aria-pressed="${s.shareFeedback === false}">Off</button></div>` +
+    h += `<div class="scene">Help improve the Companion</div><div class="chips"><button class="chip" data-feedback="1" aria-pressed="${s.shareFeedback === true}">On</button><button class="chip" data-feedback="0" aria-pressed="${s.shareFeedback !== true}">Off</button></div>` +
       `<p class="hint">Shares a little anonymous feedback data, like which version you're on and how often the Companion gets opened, so we can see what's working and what to build next. It's never linked to you or your account, and nothing from your game is ever sent.</p>`;
     h += `<div class="scene">Other</div><label class="f"><span>Screenshots folder</span><input class="in" id="s-shots" value="${esc(s.shotsFolder)}" spellcheck="false"></label>` +
       `<div class="chips"><button class="chip" data-start="1" aria-pressed="${!!s.startWithWindows}">Start with Windows</button></div>`;
     h += `<div class="scene">Good to know</div><p class="hint">Run Star Citizen in <b>Borderless</b> window mode, or the companion can't appear over it. This app never touches the game: it only draws its own window on top. Unofficial fan project, not affiliated with Cloud Imperium Games.</p>`;
+    return h;
+  }
+
+  // If the panel closes while you're picking a new hotkey, stop picking (so the old hotkey keeps working)
+  function stopRecording() { if (state.recording) { state.recording = false; api.pauseHotkey(false); } }
+
+  /* ---------- notices at the top of the panel ---------- */
+  // 1. a newer version is out  2. the one-time "help improve" question (nothing is sent until you say yes)
+  function banners() {
+    const s = state.settings; let h = "";
+    if (s.update) h += `<div class="empty notice"><b>Version ${esc(s.update)} is out.</b> It has fixes and improvements.<div class="row"><button class="btn" data-open="${SITE}/companion">Download it</button></div></div>`;
+    if (s.shareFeedback !== true && s.shareFeedback !== false) h += `<div class="empty notice"><b>Help improve the Companion?</b><br>If you say yes, it sends a random ID, the version and Windows or Linux when it opens, so we can count how many people use it. Nothing about you or your game. You can change this any time in Settings.` +
+      `<div class="row"><button class="ghost" data-act="fbYes">Yes, happy to</button><button class="ghost" data-act="fbNo">No thanks</button></div></div>`;
     return h;
   }
 
@@ -178,7 +191,7 @@
     $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${l}</button>`).join("");
     const keepQ = document.activeElement && document.activeElement.id === "t-q" ? document.activeElement.selectionStart : null;
     const v = { light: viewLight, spots: viewSpots, trade: viewTrade, photo: viewPhoto, settings: viewSettings }[state.tab];
-    $("#view").innerHTML = v();
+    $("#view").innerHTML = banners() + v();
     if (keepQ !== null) { const i = $("#t-q"); if (i) { i.focus(); i.setSelectionRange(keepQ, keepQ); } }
     $("#foot").innerHTML = `<span>Hotkey <b>${esc(state.settings.hotkey.replace(/\+/g, " + "))}</b> · ← → tabs · ↑ ↓ scroll</span><span>v${esc(state.settings.version || "")} · Unofficial fan app</span>`;
   }
@@ -188,7 +201,7 @@
     const t = e.target.closest("button, a"); if (!t) return;
     if (t.tagName === "A") e.preventDefault();
     const s = state.settings;
-    if (t.id === "close") return api.hide();
+    if (t.id === "close") { stopRecording(); return api.hide(); }
     if (t.dataset.tab) { state.tab = t.dataset.tab; state.err = ""; render(); return; }
     if (t.dataset.open) return api.open(t.dataset.open);
     if (t.dataset.comm) { state.comm = Number(t.dataset.comm) || t.dataset.comm; render(); $("#view").scrollTop = 0; return; }
@@ -201,9 +214,12 @@
       case "back": state.comm = null; render(); break;
       case "folder": api.openFolder(); break;
       case "rec": state.recording = !state.recording; api.pauseHotkey(state.recording); render(); break;
-      case "saveUex": { await save({ uexToken: $("#s-uex").value.trim() }); state.comms = null; state.prices = {}; state.check = "Key saved."; render(); break; }
+      case "saveUex": { const k = $("#s-uex").value.trim(); if (!k) { state.check = "Paste a key first."; render(); break; } await save({ uexToken: k }); state.comms = null; state.prices = {}; state.check = "Key saved."; render(); break; }
+      case "clearUex": await save({ uexToken: "" }); state.comms = null; state.prices = {}; state.check = "Key removed."; render(); break;
+      case "fbYes": await save({ shareFeedback: true }); break;
+      case "fbNo": await save({ shareFeedback: false }); break;
       case "checkUex": {
-        await save({ uexToken: $("#s-uex").value.trim() }); state.comms = null; state.prices = {};
+        { const k = $("#s-uex").value.trim(); if (k) await save({ uexToken: k }); } state.comms = null; state.prices = {};
         state.check = "Checking…"; render();
         const r = await api.uex("commodities", {}, 0);
         state.check = r.error ? (r.error === "no-token" ? "Add your key first." : "Didn't work: " + r.error) : `Connected. UEX lists ${(r.data || []).length} commodities.`;
@@ -234,7 +250,7 @@
       await save({ hotkey: acc });
       return;
     }
-    if (e.key === "Escape") api.hide();
+    if (e.key === "Escape") { stopRecording(); api.hide(); }
     // no mouse needed: ← → change tab, ↑ ↓ scroll (not while typing in a box)
     if (/INPUT|SELECT|TEXTAREA/.test((e.target && e.target.tagName) || "")) return;
     const d = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" }[e.key];
@@ -252,7 +268,7 @@
   /* ---------- start ---------- */
   api.onSettings((s) => { state.settings = { ...state.settings, ...s }; render(); });
   // each time the panel opens: redraw, and swing it out from the screen edge
-  api.onShown(() => { render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); glitchOpen(p); });
+  api.onShown(() => { stopRecording(); render(); const p = $("#panel"); p.classList.remove("open"); void p.offsetWidth; p.classList.add("open"); glitchOpen(p); });
 
   /* ---------- Opening glitch ----------
      As the panel opens: blocks of digital noise flash across the glass (drawn on a canvas for 0.65 s),

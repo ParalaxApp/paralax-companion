@@ -32,9 +32,13 @@ The companion never touches the game. It doesn't read the game's memory or files
 
 - **Running programs:** every 5 seconds it checks whether `StarCitizen.exe` is running (just the name).
 - **Keyboard:** only while Star Citizen is running, it listens for your one hotkey (and the arrow keys while the panel is open), like push-to-talk in Discord. It never records or sends key presses. When the game isn't running, the listener is switched off.
-- **Clipboard:** only while Star Citizen is running, it checks for a `/showlocation` line once a second. It never keeps your clipboard: only a fingerprint (hash) to notice changes, and the three coordinates if it was a `/showlocation` line. Off switch in Settings.
-- **Feedback data:** a random ID, the version and Windows/Linux, so we can count users. Nothing about you or your game. Off switch in Settings.
+- **Clipboard:** only while Star Citizen is running, it checks for a `/showlocation` line once a second. It never keeps your clipboard: only a fingerprint (hash) to notice changes. If it was a `/showlocation` line, the place it worked out (name and time, not the coordinates) is saved in its settings so the light strip can follow you. Off switch in Settings.
+- **Your UEX key:** locked with your system's own encryption (Windows DPAPI, or your Linux keyring). If a Linux PC has no keyring, the key isn't saved at all and only lasts until the app closes. It's only ever sent to UEX.
+- **Usage data:** only if you say yes when it asks: a random ID, the version and Windows/Linux, when it opens and every 6 hours while it runs. Nothing about you or your game. Change it any time in Settings.
+- **Update check:** when it opens and every 6 hours, it asks GitHub for the newest version number (like any web request, GitHub sees your IP address). If there's a newer one, it tells you.
+- **Nothing else online:** fonts are built in; the Spots tab loads spots and photos from paralaxverse.com; the Trade tab talks to UEX.
 - **Downloads** come with a SHA-256 fingerprint on the release page, so you can check yours is genuine.
+- **Locked down:** the app's windows can't open other pages, new windows, or your camera, mic or location, and it ships with Electron's "fuses" set so it can't be misused as a general-purpose program runner.
 
 All the code is here for anyone to read.
 

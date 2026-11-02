@@ -260,3 +260,6 @@ body[data-veil=light]{--veil:.30}
   100%{opacity:1;clip-path:inset(0);transform:rotateY(-11deg);filter:none}
 }
 @media (prefers-reduced-motion:reduce){.panel.open{animation:none}}
+/* 0.7.0: notices at the top of the panel (new version, the one-time usage-data question) */
+.notice{margin-bottom:12px}
+.notice .row{margin-top:10px}
