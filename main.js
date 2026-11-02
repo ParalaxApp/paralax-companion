@@ -7,6 +7,8 @@
 //
 // Safety: the app never touches the game. It doesn't read the game's memory or files, and doesn't inject anything.
 // It only draws its own windows on top, the same way Discord or Steam pop-ups do.
+// Privacy (0.6.3): the keyboard listener and the clipboard check ONLY run while Star Citizen is running.
+// When the game isn't running, both are switched off completely (the normal Windows hotkey still opens the panel).
 
 const { app, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, shell, screen, nativeImage, clipboard } = require("electron");
 const path = require("path");
@@ -155,13 +157,21 @@ function startKeyListener() {
     if (code === undefined || e.keycode !== code) return;
     if (!!e.ctrlKey === h.ctrl && !!e.altKey === h.alt && !!e.shiftKey === h.shift) toggleOnce();
   });
-  try { uIOhook.start(); keyListenerOn = true; app.on("will-quit", () => { try { uIOhook.stop(); } catch (er) { /* ignore */ } }); } catch (e) { console.error(e); }
+  keyHook = uIOhook;
+  app.on("will-quit", () => setKeyListener(false));
+}
+// Switch the keyboard listener on or off. It's only on while Star Citizen is running (see "Is the game running?").
+let keyHook = null;
+function setKeyListener(on) {
+  if (!keyHook || on === keyListenerOn) return;
+  try { if (on) keyHook.start(); else keyHook.stop(); keyListenerOn = on; } catch (e) { console.error(e); }
+  registerHotkey();   // refreshes the tray tip
 }
 function registerHotkey() {
   globalShortcut.unregisterAll();
   try { hotkeyOk = globalShortcut.register(settings.hotkey, () => toggleOnce()); } catch (e) { hotkeyOk = false; }
-  if (!hotkeyOk && keyListenerOn) hotkeyOk = true;   // the keyboard listener still hears it, even if Windows says it's taken
-  if (tray) tray.setToolTip(`Paralax Verse Companion · ${hotkeyOk ? settings.hotkey + " to open" : "hotkey not available, pick another in Settings"}`);
+  if (!hotkeyOk && keyHook) hotkeyOk = true;   // the keyboard listener still hears it, even if Windows says it's taken
+  if (tray) tray.setToolTip(`Paralax Verse Companion · ${hotkeyOk ? settings.hotkey + " to open" : "hotkey not available, pick another in Settings"}${gameRunning ? " · Star Citizen running" : ""}`);
 }
 
 // ---------- Tray icon (bottom-right of Windows) ----------
@@ -178,7 +188,7 @@ function createTray() {
   tray.on("click", () => togglePanel());
   tray.on("right-click", () => tray.setContextMenu(menu()));
 }
-function broadcast() { [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("settings", { ...settings, hotkeyOk })); }
+function broadcast() { [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("settings", { ...settings, hotkeyOk, gameRunning })); }
 
 // ---------- Trade data from UEX (fetched here, not in the window, and kept for a while to go easy on their servers) ----------
 const cache = new Map();
@@ -202,23 +212,28 @@ async function uex(endpoint, params, ttlMin) {
 // In Star Citizen, typing /showlocation in chat copies your position to the clipboard. We look at the clipboard
 // once a second: if it's a /showlocation line, we work out where that is and switch the Light and Spots tabs to it.
 // Anything else on the clipboard is ignored: it isn't kept, logged or sent anywhere.
+// We don't even keep a copy to compare with: only a fingerprint (a hash), so we can tell when it changes.
+// And it only runs while Star Citizen is running.
 // Still hands off the game: the game itself puts the text on the clipboard when YOU type the command.
 global.window = global.window || {};
 require("./app/dn.js"); require("./app/geo.js"); require("./app/locate.js");
 const LOC = global.window.LOC;
-let lastClip = null;
+let lastClip = null;   // fingerprint of the clipboard last time we looked (never the text itself)
+const fingerprint = (t) => require("crypto").createHash("sha256").update(t).digest("hex");
 function logLocation(line) {   // a small local log of /showlocation readings, to help fix any wrong guesses
   try { fs.appendFileSync(path.join(app.getPath("userData"), "locations.log"), line + "\n"); } catch (e) { /* ignore */ }
 }
 function watchClipboard() {
   setInterval(() => {
-    if (!settings.autoLocation) return;
+    if (!settings.autoLocation || !gameRunning) { lastClip = null; return; }   // game closed: don't look at all
     let text = "";
     try { text = clipboard.readText(); } catch (e) { return; }
-    if (text === lastClip) return;
-    const first = lastClip === null; lastClip = text;
-    if (first) return;                          // whatever was there when the app started is old news
-    const xyz = LOC.parse(text); if (!xyz) return;
+    const fp = fingerprint(text);
+    if (fp === lastClip) { text = ""; return; }
+    const first = lastClip === null; lastClip = fp;
+    const xyz = first ? null : LOC.parse(text);  // whatever was there when the game started is old news
+    text = "";                                   // done with it: only the three numbers (if it was a /showlocation line) are kept
+    if (!xyz) return;
     const at = Date.now(), r = LOC.locate(xyz, at);
     logLocation(`${new Date(at).toISOString()}\t${xyz.join(" ")}\t${r ? r.text : "unknown"}`);
     const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
@@ -227,6 +242,34 @@ function watchClipboard() {
     saveSettings(); broadcast();
     [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("located", found));
   }, 1000);
+}
+
+// ---------- Is the game running? ----------
+// Every 5 seconds we check the list of running programs for StarCitizen.exe (just its name, nothing inside it).
+// The keyboard listener and the clipboard check only run while it's there.
+let gameRunning = false;
+const { execFile } = require("child_process");
+function checkGame() {
+  return new Promise((done) => {
+    if (process.platform === "win32") {
+      execFile("tasklist", ["/FI", "IMAGENAME eq StarCitizen.exe", "/NH", "/FO", "CSV"], { windowsHide: true, timeout: 4000 },
+        (err, out) => done(!err && /"StarCitizen\.exe"/i.test(out || "")));
+    } else {
+      // Linux (Wine / Proton): the game shows up as a process called StarCitizen.exe
+      try { done(fs.readdirSync("/proc").some((d) => /^\d+$/.test(d) && (() => { try { return /StarCitizen\.exe/i.test(fs.readFileSync(`/proc/${d}/comm`, "utf8")); } catch (e) { return false; } })())); }
+      catch (e) { done(false); }
+    }
+  });
+}
+async function watchGame() {
+  const now = await checkGame();
+  if (now !== gameRunning) {
+    gameRunning = now;
+    setKeyListener(now);
+    if (!now) lastClip = null;
+    broadcast();
+  }
+  setTimeout(watchGame, 5000);
 }
 
 // ---------- Anonymous feedback data ----------
@@ -247,7 +290,7 @@ function sendFeedback() {
 }
 
 // ---------- Messages from the windows ----------
-ipcMain.handle("settings:get", () => ({ ...settings, hotkeyOk, version: app.getVersion() }));
+ipcMain.handle("settings:get", () => ({ ...settings, hotkeyOk, gameRunning, version: app.getVersion() }));
 ipcMain.handle("settings:set", (e, patch) => {
   const allowed = Object.keys(DEFAULTS);
   for (const k of Object.keys(patch || {})) if (allowed.includes(k)) settings[k] = patch[k];
@@ -273,7 +316,7 @@ if (process.platform === "linux") { app.commandLine.appendSwitch("enable-transpa
 const ready = () => process.platform === "linux" ? new Promise((r) => setTimeout(r, 400)) : Promise.resolve();
 app.whenReady().then(ready).then(() => {
   loadSettings();
-  createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard();
+  createPanel(); createHud(); createTray(); startKeyListener(); registerHotkey(); watchClipboard(); watchGame();
   sendFeedback(); setInterval(sendFeedback, 6 * 3600e3);
   togglePanel(true);  // show it once at start, so people know it's running
 });

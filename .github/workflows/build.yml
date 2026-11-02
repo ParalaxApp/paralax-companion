@@ -45,8 +45,12 @@ jobs:
           fi
           if gh release view "v$VER" --repo $REPO >/dev/null 2>&1; then echo "v$VER is already published"; exit 0; fi
           cp dist/*.exe "dist/Paralax-Verse-Companion-Setup.exe"
-          gh release create "v$VER" "dist/Paralax-Verse-Companion-Setup.exe" --repo $REPO --title "Paralax Verse Companion $VER" \
-            --notes "Free, unofficial Star Citizen companion from paralaxverse.com. Windows 10 and 11. Not affiliated with Cloud Imperium Games." --latest
+          # a fingerprint (SHA-256) of the download, so anyone can check their copy is the genuine one
+          (cd dist && sha256sum Paralax-Verse-Companion-Setup.exe > SHA256SUMS.txt)
+          SUM=$(cut -d' ' -f1 dist/SHA256SUMS.txt)
+          printf 'Free, unofficial Star Citizen companion from paralaxverse.com. Windows 10 and 11. Not affiliated with Cloud Imperium Games.\n\nCheck your download is genuine (SHA-256):\n\n`%s`  Paralax-Verse-Companion-Setup.exe\n\nOn Windows: open PowerShell in your Downloads folder and run `Get-FileHash Paralax-Verse-Companion-Setup.exe`. The Hash shown should match the one above.\n' "$SUM" > dist/notes.md
+          gh release create "v$VER" "dist/Paralax-Verse-Companion-Setup.exe" "dist/SHA256SUMS.txt" --repo $REPO --title "Paralax Verse Companion $VER" \
+            --notes-file dist/notes.md --latest
       - name: Make a release (version tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -84,4 +88,10 @@ jobs:
           VER=$(node -p "require('./package.json').version")
           if ! gh release view "v$VER" --repo $REPO >/dev/null 2>&1; then echo "No v$VER release yet"; exit 0; fi
           cp dist/*.AppImage "dist/Paralax-Verse-Companion.AppImage"
-          gh release upload "v$VER" "dist/Paralax-Verse-Companion.AppImage" --repo $REPO --clobber
+          # add the AppImage's fingerprint to the release's SHA256SUMS.txt and notes
+          gh release download "v$VER" --repo $REPO --pattern SHA256SUMS.txt --dir /tmp/sums --clobber || true
+          (cd dist && sha256sum Paralax-Verse-Companion.AppImage) >> /tmp/sums/SHA256SUMS.txt
+          gh release upload "v$VER" "dist/Paralax-Verse-Companion.AppImage" /tmp/sums/SHA256SUMS.txt --repo $REPO --clobber
+          gh release view "v$VER" --repo $REPO --json body -q .body > /tmp/notes.md
+          printf '\n`%s`  Paralax-Verse-Companion.AppImage (Linux: `sha256sum Paralax-Verse-Companion.AppImage`)\n' "$(sha256sum dist/Paralax-Verse-Companion.AppImage | cut -d' ' -f1)" >> /tmp/notes.md
+          gh release edit "v$VER" --repo $REPO --notes-file /tmp/notes.md

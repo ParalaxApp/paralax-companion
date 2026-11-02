@@ -1,14 +1,14 @@
 {
   "name": "paralax-companion",
   "productName": "Paralax Verse Companion",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "An in-game companion overlay for Star Citizen, from Paralax Verse. Unofficial fan project.",
   "main": "main.js",
   "author": {
     "name": "Paralax Verse",
     "email": "noreply@paralaxverse.com"
   },
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "scripts": {
     "start": "electron .",

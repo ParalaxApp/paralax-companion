@@ -160,7 +160,8 @@
       `<div class="row"><button class="ghost" data-act="saveUex">Save key</button><button class="ghost" data-act="checkUex">Check connection</button></div>${state.check ? `<p class="hint">${esc(state.check)}</p>` : ""}` +
       `<p class="hint">Free from uexcorp.space → API → My Apps → create an app, then copy its token. It stays on this PC.</p>`;
     h += `<div class="scene">Auto location</div><div class="chips"><button class="chip" data-autoloc="1" aria-pressed="${s.autoLocation !== false}">On</button><button class="chip" data-autoloc="0" aria-pressed="${s.autoLocation === false}">Off</button></div>` +
-      `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>`;
+      `<p class="hint">Type <code>/showlocation</code> in Star Citizen's chat and the companion switches to where you are. It only looks for that line on your clipboard and ignores everything else.</p>` +
+      `<p class="hint">The clipboard check and the in-game hotkey listener only run while Star Citizen is running${s.gameRunning ? " (it is now)" : " (it isn't now, so both are off)"}.</p>`;
     h += `<div class="scene">Help improve the Companion</div><div class="chips"><button class="chip" data-feedback="1" aria-pressed="${s.shareFeedback !== false}">On</button><button class="chip" data-feedback="0" aria-pressed="${s.shareFeedback === false}">Off</button></div>` +
       `<p class="hint">Shares a little anonymous feedback data, like which version you're on and how often the Companion gets opened, so we can see what's working and what to build next. It's never linked to you or your account, and nothing from your game is ever sent.</p>`;
     h += `<div class="scene">Other</div><label class="f"><span>Screenshots folder</span><input class="in" id="s-shots" value="${esc(s.shotsFolder)}" spellcheck="false"></label>` +
