@@ -42,6 +42,14 @@ The companion never touches the game. It doesn't read the game's memory or files
 
 All the code is here for anyone to read.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (applied for in November 2026; until approved, downloads are not signed yet).
+Only builds made by GitHub Actions from this public repository are signed.
+
+- Author, reviewer and approver: Paralax (project owner)
+- Privacy: see "Privacy: exactly what it looks at" above. Optional usage data is only sent if you say yes, and can be switched off in Settings.
+
 ## How it was made
 
 Designed by Paralax and built with help from AI (Claude). Every change is in this repository's history.
