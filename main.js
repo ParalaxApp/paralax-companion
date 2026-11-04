@@ -275,23 +275,33 @@ const LOC = global.window.LOC;
 let lastClip = null;   // fingerprint of the clipboard last time we looked (never the text itself)
 const fingerprint = (t) => require("crypto").createHash("sha256").update(t).digest("hex");
 function watchClipboard() {
-  setInterval(() => {
-    if (!settings.autoLocation || !gameRunning) { lastClip = null; return; }   // game closed: don't look at all
-    let text = "";
-    try { text = clipboard.readText(); } catch (e) { return; }
-    const fp = fingerprint(text);
-    if (fp === lastClip) { text = ""; return; }
-    const first = lastClip === null; lastClip = fp;
-    const xyz = first ? null : LOC.parse(text);  // whatever was there when the game started is old news
-    text = "";                                   // done with it: only the three numbers (if it was a /showlocation line) are kept
-    if (!xyz) return;
-    const at = Date.now(), r = LOC.locate(xyz, at);
-    const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
-    if (r) { settings.system = r.system; settings.body = r.body; if (r.place) settings.place = r.place; }
-    settings.lastLocation = found;
-    saveSettings(); broadcast();
-    [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("located", found));
+  let busy = false;
+  setInterval(async () => {
+    if (busy) return;   // the last check hasn't finished yet
+    busy = true;
+    try { await checkClipboard(); } catch (e) { console.error("clipboard check", e); }   // a problem here must never crash the app
+    busy = false;
   }, 1000);
+}
+async function checkClipboard() {
+  if (!settings.autoLocation || !gameRunning) { lastClip = null; return; }   // game closed: don't look at all
+  // Newer Electron versions hand the clipboard back a moment later (a "promise"), older ones straight away:
+  // "await" works for both. (0.7.0 forgot this and crashed: fixed in 0.7.1.)
+  let text = "";
+  try { text = await clipboard.readText(); } catch (e) { return; }
+  if (typeof text !== "string") return;
+  const fp = fingerprint(text);
+  if (fp === lastClip) { text = ""; return; }
+  const first = lastClip === null; lastClip = fp;
+  const xyz = first ? null : LOC.parse(text);  // whatever was there when the game started is old news
+  text = "";                                   // done with it: only the three numbers (if it was a /showlocation line) are kept
+  if (!xyz) return;
+  const at = Date.now(), r = LOC.locate(xyz, at);
+  const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
+  if (r) { settings.system = r.system; settings.body = r.body; if (r.place) settings.place = r.place; }
+  settings.lastLocation = found;
+  saveSettings(); broadcast();
+  [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("located", found));
 }
 
 // ---------- Is the game running? ----------
@@ -394,6 +404,10 @@ handle("panel:hide", () => togglePanel(false));
 handle("panel:pauseHotkey", (e, on) => { hookPaused = !!on; if (on) globalShortcut.unregisterAll(); else registerHotkey(); });  // while picking a new hotkey
 
 // ---------- Start ----------
+// Safety net: if something unexpected goes wrong in a background job, note it and carry on,
+// instead of showing a scary "JavaScript error" box over the game.
+process.on("uncaughtException", (e) => console.error("Companion problem (carried on):", e));
+process.on("unhandledRejection", (e) => console.error("Companion problem (carried on):", e));
 const firstCopy = app.requestSingleInstanceLock();
 if (!firstCopy) app.exit(0);   // already running: this second copy stops straight away and does nothing else
 if (process.platform === "win32") app.setAppUserModelId("com.paralaxverse.companion");   // so Windows notifications show our name
