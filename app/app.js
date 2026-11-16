@@ -103,9 +103,10 @@
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const rows = await res.json();
+      if (state.settings.shotList !== code) return;   // the code was changed or forgotten while this loaded
       state.list = Array.isArray(rows) ? rows : [];
       if (!state.list.length) state.listErr = "No list found for that code. It may have been turned off: check it on your dossier.";
-    } catch (e) { console.error(e); state.list = "err"; }
+    } catch (e) { console.error(e); if (state.settings.shotList === code) state.list = "err"; }
     render();
   }
   function lightAt(sp) {
