@@ -30,7 +30,12 @@
 
   /* ---------- LIGHT: golden hour where you are ---------- */
   function viewLight() {
-    const s = state.settings, place = DN.findPlace(s.place, s.body) || placesOn(s.body)[0];
+    const s = state.settings;
+    // Your exact spot from the last /showlocation (if you're on the ground there): times right where you stand.
+    // Otherwise the place picked below.
+    const exact = s.here && s.here.body === s.body ? s.here : null;
+    const named = DN.findPlace(s.place, s.body) || placesOn(s.body)[0];
+    const place = exact ? ["Your exact spot", exact.body, exact.lat, exact.lon, 0] : named;
     let h = `<div class="scene">Light · ${esc(s.system)}</div>`;
     // where /showlocation last put you (or how to use it)
     const L = s.lastLocation;
@@ -38,7 +43,9 @@
       : `<div class="loc hint-loc"><b>📍 Set your place automatically</b><span>In game, type <code>/showlocation</code> in chat. The companion picks it up from there.</span></div>`;
     h += `<div class="row"><select class="in" id="l-sys" aria-label="System">${systems().map((x) => `<option${x === s.system ? " selected" : ""}>${esc(x)}</option>`).join("")}</select>` +
       `<select class="in" id="l-body" aria-label="Planet or moon">${bodiesIn(s.system).map((x) => `<option${x === s.body ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></div>`;
-    h += `<label class="f"><span>Place</span><select class="in" id="l-place">${placesOn(s.body).map((p) => `<option${place && p[0] === place[0] ? " selected" : ""}>${esc(p[0])}</option>`).join("")}</select></label>`;
+    h += `<label class="f"><span>Place</span><select class="in" id="l-place">${exact ? `<option selected disabled>Your exact spot</option>` : ""}${placesOn(s.body).map((p) => `<option${!exact && place && p[0] === place[0] ? " selected" : ""}>${esc(p[0])}</option>`).join("")}</select></label>`;
+    if (exact)
+      h += `<div class="loc"><b>${esc(exact.body)} ${esc(LOC.latLonText(exact.lat, exact.lon))} · grid ${esc(LOC.gridRef(exact.lat, exact.lon))}</b><span>Times below are for exactly where you stood. Copy it to paste into a spot's exact position on paralaxverse.com.</span><div class="row" style="margin-top:6px"><button class="ghost" data-act="copyPos">Copy position</button></div></div>`;
     if (!place) return h + `<p class="empty">No places listed on ${esc(s.body)} yet.</p>`;
     const x = DN.sunAt(place);
     if (!x) return h + `<p class="empty">${esc(s.body)} doesn't spin, so the light never changes there.</p>`;
@@ -212,6 +219,7 @@
     if (t.dataset.start) { await save({ startWithWindows: !s.startWithWindows }); return; }
     switch (t.dataset.act) {
       case "back": state.comm = null; render(); break;
+      case "copyPos": { const ok = await api.copyPosition(); t.textContent = ok ? "Copied" : "Nothing to copy"; setTimeout(() => render(), 1500); break; }
       case "folder": api.openFolder(); break;
       case "rec": state.recording = !state.recording; api.pauseHotkey(state.recording); render(); break;
       case "saveUex": { const k = $("#s-uex").value.trim(); if (!k) { state.check = "Paste a key first."; render(); break; } await save({ uexToken: k }); state.comms = null; state.prices = {}; state.check = "Key saved."; render(); break; }

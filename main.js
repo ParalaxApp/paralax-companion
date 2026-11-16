@@ -88,7 +88,7 @@ function saveSettings() {
   try { fs.mkdirSync(path.dirname(settingsFile()), { recursive: true }); fs.writeFileSync(settingsFile(), JSON.stringify(out, null, 2)); } catch (e) { console.error(e); }
 }
 // What the windows are allowed to see: everything except the UEX key itself (they only need to know there is one)
-function publicSettings() { const p = { ...settings, hotkeyOk, gameRunning, hasUex: !!settings.uexToken, tokenLocked: canEncrypt(), tokenStuck: !settings.uexToken && !!keptEnc, update: latest, version: app.getVersion() }; delete p.uexToken; return p; }
+function publicSettings() { const p = { ...settings, here, hotkeyOk, gameRunning, hasUex: !!settings.uexToken, tokenLocked: canEncrypt(), tokenStuck: !settings.uexToken && !!keptEnc, update: latest, version: app.getVersion() }; delete p.uexToken; return p; }
 
 let panel = null, hud = null, tray = null, hotkeyOk = true;
 
@@ -273,6 +273,10 @@ global.window = global.window || {};
 require("./app/dn.js"); require("./app/geo.js"); require("./app/locate.js");
 const LOC = global.window.LOC;
 let lastClip = null;   // fingerprint of the clipboard last time we looked (never the text itself)
+// Your exact spot on the ground (planet or moon, latitude, longitude) from the last /showlocation, so the Light
+// tab can give times right where you stand. Kept in memory only: never saved to disk or sent anywhere, and
+// forgotten when the Companion closes or you pick another place yourself.
+let here = null;
 const fingerprint = (t) => require("crypto").createHash("sha256").update(t).digest("hex");
 function watchClipboard() {
   let busy = false;
@@ -299,6 +303,7 @@ async function checkClipboard() {
   const at = Date.now(), r = LOC.locate(xyz, at);
   const found = r ? { text: r.text, at, kind: r.kind } : { text: "Somewhere we don't have on the map yet", at, kind: "unknown" };
   if (r) { settings.system = r.system; settings.body = r.body; if (r.place) settings.place = r.place; }
+  here = r && r.kind === "surface" && Number.isFinite(r.lat) && Number.isFinite(r.lon) ? { body: r.body, lat: r.lat, lon: r.lon, at } : null;
   settings.lastLocation = found;
   saveSettings(); broadcast();
   [panel, hud].forEach((w) => w && !w.isDestroyed() && w.webContents.send("located", found));
@@ -383,6 +388,7 @@ handle("settings:set", (e, patch) => {
     if (k === "shotsFolder" && /^(\\\\|\/\/)/.test(v)) continue;   // no network paths (\\server\share): Windows would try to sign in to them
     settings[k] = v;
   }
+  if ("place" in patch || "body" in patch || "system" in patch) here = null;   // you picked somewhere yourself
   saveSettings();
   if ("hotkey" in patch) registerHotkey();
   if ("hud" in patch || "hudCorner" in patch) updateHud();
@@ -393,6 +399,14 @@ handle("settings:set", (e, patch) => {
   return publicSettings();
 });
 handle("uex", (e, endpoint, params, ttl) => uex(endpoint, params, ttl));
+// "Copy position": puts your exact spot on the clipboard as text like "Hurston 12.41°N 81.02°E", to paste into
+// paralaxverse.com (a spot's exact position, or /sun). Only when you press the button; the text is made here
+// from the position in memory, so the window can't put anything else on your clipboard.
+handle("copyPosition", () => {
+  if (!here) return false;
+  clipboard.writeText(`${here.body} ${LOC.latLonText(here.lat, here.lon)}`);
+  return true;
+});
 // Links only open if they go to one of these sites (so nothing can make the app open anything else)
 const LINK_HOSTS = ["paralaxverse.com", "uexcorp.space", "robertsspaceindustries.com", "github.com"];
 handle("open", (e, url) => {

@@ -7,7 +7,9 @@
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function draw() {
     if (!s || document.getElementById("hud").classList.contains("loc") && Date.now() - ((s.lastLocation && s.lastLocation.at) || 0) < 5500) return;
-    const place = DN.findPlace(s.place, s.body), hud = document.getElementById("hud");
+    // your exact spot from the last /showlocation (in memory only), else the place you picked
+    const exact = s.here && s.here.body === s.body ? s.here : null;
+    const place = exact ? ["Your spot", exact.body, exact.lat, exact.lon, 0] : DN.findPlace(s.place, s.body), hud = document.getElementById("hud");
     hud.className = "hud";
     hud.dataset.side = (s.hudCorner || "top-right").includes("left") ? "left" : "right";  // which screen edge it sits against
     if (!place) { set("k", "Paralax Verse"); set("v", `Pick a place · <em>${esc(s.hotkey)}</em>`); return; }
