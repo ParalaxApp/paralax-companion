@@ -1,5 +1,6 @@
 /* Paralax Verse Companion: the panel.
-   Five tabs: Light (golden hour where you are), Spots (scenic spots on this planet or moon, from paralaxverse.com),
+   Six tabs: Light (golden hour where you are), Spots (scenic spots on this planet or moon, from paralaxverse.com),
+   List (a shot list from your paralaxverse.com dossier, followed one spot at a time, using its secret code),
    Trade (where to buy and sell, from UEX), Photo (photo mode keys) and Settings.
    Same pattern as the website: state -> render() -> HTML. All text from outside is escaped with esc(). */
 (function () {
@@ -14,7 +15,7 @@
     setSettings: async (p) => Object.assign(state.settings, p), uex: async () => ({ error: "no-token" }), open: async (u) => window.open(u), openFolder: async () => {}, hide: async () => {}, pauseHotkey: async () => {}, onSettings: () => {}, onShown: () => {}
   };
 
-  const state = { tab: "light", settings: null, spots: {}, comms: null, commQ: "", comm: null, prices: {}, err: "", recording: false, check: "" };
+  const state = { list: null, listErr: "", tab: "light", settings: null, spots: {}, comms: null, commQ: "", comm: null, prices: {}, err: "", recording: false, check: "" };
 
   /* ---------- helpers ---------- */
   const systems = () => [...new Set(Object.values(DN.BODIES).map((b) => b[0]))];
@@ -83,6 +84,58 @@
     h += list.map((sp) => `<button class="spot${sp.fankit ? " fk" : ""}" data-open="${SITE}/s/${esc(sp.id)}"><img src="${esc(imgUrl(sp.thumb_path || sp.photo_path))}" alt="" loading="lazy">` +
       `<span class="t"><small>${esc([sp.place, sp.light, sp.shot].filter(Boolean).join(" · "))}</small><b>${esc(sp.name)}</b>${sp.tip ? `<span class="tip">${esc(sp.tip.length > 110 ? sp.tip.slice(0, 108) + "…" : sp.tip)}</span>` : ""}</span></button>`).join("");
     return h + `<p class="hint">Tap a spot to open it on paralaxverse.com.</p>`;
+  }
+
+  /* ---------- LIST: a shot list from paralaxverse.com ----------
+     On the website, a pilot makes a shot list and taps "Send to Companion", which gives a 10-character code.
+     Typed in here, the code fetches just that list's name and spots (never who made it), and you work
+     through it one spot at a time: where it is, and when the light's right there. Only the code is saved. */
+  const cleanCode = (v) => String(v || "").toUpperCase().replace(/[^0-9A-F]/g, "").slice(0, 10);
+  async function loadList() {
+    const code = state.settings.shotList;
+    if (!code) return;
+    state.list = "loading"; state.listErr = ""; render();
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/shot_list_by_code`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_code: code })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const rows = await res.json();
+      state.list = Array.isArray(rows) ? rows : [];
+      if (!state.list.length) state.listErr = "No list found for that code. It may have been turned off: check it on your dossier.";
+    } catch (e) { console.error(e); state.list = "err"; }
+    render();
+  }
+  function lightAt(sp) {
+    const pl = DN.findPlace(sp.place, sp.body) || placesOn(sp.body)[0];
+    const x = pl && DN.sunAt(pl);
+    if (!x) return "";
+    return x.golden ? `<span class="gold-t">Golden hour now</span>` : x.nextGolden ? `Golden hour ${inText(x.nextGolden)} · ${timeText(x.nextGolden)}` : esc(x.status);
+  }
+  function viewList() {
+    const s = state.settings;
+    let h = `<div class="scene">Shot list</div>`;
+    if (!s.shotList) {
+      return h + `<p class="p">Follow one of your Paralax Verse shot lists here, one spot at a time.</p>` +
+        `<label class="f"><span>Companion code</span><input class="in code" id="sl-code" maxlength="11" spellcheck="false" autocomplete="off" placeholder="ABCDE-12345"></label>` +
+        `<div class="row"><button class="btn" data-act="listLoad">Load list</button></div>${state.listErr ? `<p class="err">${esc(state.listErr)}</p>` : ""}` +
+        `<p class="hint">On paralaxverse.com open your dossier → Shot lists → a list → <b>Send to Companion</b>. Only the code is kept on this PC.</p>`;
+    }
+    const L = state.list;
+    if (L === null) { loadList(); return h + `<p class="p"><span class="spin"></span>Loading your list…</p>`; }
+    if (L === "loading") return h + `<p class="p"><span class="spin"></span>Loading your list…</p>`;
+    if (L === "err") return h + `<p class="err">Couldn't reach Paralax Verse. Check your connection.</p><div class="row"><button class="ghost" data-act="listLoad">Try again</button><button class="ghost" data-act="listForget">Use another code</button></div>`;
+    if (!L.length) return h + `<p class="err">${esc(state.listErr)}</p><div class="row"><button class="ghost" data-act="listForget">Use another code</button></div>`;
+    const i = Math.min(Math.max(0, s.shotListStep || 0), L.length - 1), sp = L[i];
+    h = `<div class="scene">${esc(L[0].list_name)} · ${i + 1} of ${L.length}</div>`;
+    h += `<div class="now"><div class="sub">${esc([sp.place, sp.body, sp.system].filter(Boolean).join(" · "))}</div><div class="st">${esc(sp.spot_name)}</div><div class="clk">${lightAt(sp)}</div></div>`;
+    h += `<div class="row" style="margin-top:10px"><button class="ghost" data-act="listPrev"${i === 0 ? " disabled" : ""}>‹ Back</button><button class="btn" data-act="listNext"${i >= L.length - 1 ? " disabled" : ""}>Next spot ›</button></div>`;
+    h += `<div class="row" style="margin-top:8px"><button class="ghost" data-open="${SITE}/s/${esc(sp.spot_id)}">Open on Paralax Verse</button><button class="ghost" data-act="listHere">Watch this place's light</button></div>`;
+    h += `<div class="scene">The list</div><div class="evs">${L.map((x, k) => `<button class="ev sl-row${k === i ? " on" : ""}" data-step="${k}"><b>${String(k + 1).padStart(2, "0")} · ${esc(x.spot_name)}</b><span>${esc(x.place || x.body || "")}</span></button>`).join("")}</div>`;
+    h += `<div class="row" style="margin-top:10px"><button class="ghost" data-act="listLoad">Refresh</button><button class="ghost" data-act="listForget">Use another code</button></div>`;
+    return h;
   }
 
   /* ---------- TRADE: where to buy and sell, from UEX ---------- */
@@ -191,13 +244,13 @@
   }
 
   /* ---------- drawing ---------- */
-  const TABS = [["light", "Light"], ["spots", "Spots"], ["trade", "Trade"], ["photo", "Photo"], ["settings", "Settings"]];
+  const TABS = [["light", "Light"], ["spots", "Spots"], ["list", "List"], ["trade", "Trade"], ["photo", "Photo"], ["settings", "Settings"]];
   function render() {
     if (!state.settings) return;
     document.body.dataset.veil = state.settings.veil || "medium";  // see-through level
     $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${l}</button>`).join("");
     const keepQ = document.activeElement && document.activeElement.id === "t-q" ? document.activeElement.selectionStart : null;
-    const v = { light: viewLight, spots: viewSpots, trade: viewTrade, photo: viewPhoto, settings: viewSettings }[state.tab];
+    const v = { light: viewLight, spots: viewSpots, list: viewList, trade: viewTrade, photo: viewPhoto, settings: viewSettings }[state.tab];
     $("#view").innerHTML = banners() + v();
     if (keepQ !== null) { const i = $("#t-q"); if (i) { i.focus(); i.setSelectionRange(keepQ, keepQ); } }
     $("#foot").innerHTML = `<span>Hotkey <b>${esc(state.settings.hotkey.replace(/\+/g, " + "))}</b> · ← → tabs · ↑ ↓ scroll</span><span>v${esc(state.settings.version || "")} · Unofficial fan app</span>`;
@@ -217,6 +270,7 @@
     if (t.dataset.autoloc) { await save({ autoLocation: t.dataset.autoloc === "1" }); return; }
     if (t.dataset.feedback) { await save({ shareFeedback: t.dataset.feedback === "1" }); return; }
     if (t.dataset.start) { await save({ startWithWindows: !s.startWithWindows }); return; }
+    if (t.dataset.step) { await save({ shotListStep: Number(t.dataset.step) || 0 }); return; }
     switch (t.dataset.act) {
       case "back": state.comm = null; render(); break;
       case "copyPos": { const ok = await api.copyPosition(); t.textContent = ok ? "Copied" : "Nothing to copy"; setTimeout(() => render(), 1500); break; }
@@ -224,6 +278,27 @@
       case "rec": state.recording = !state.recording; api.pauseHotkey(state.recording); render(); break;
       case "saveUex": { const k = $("#s-uex").value.trim(); if (!k) { state.check = "Paste a key first."; render(); break; } await save({ uexToken: k }); state.comms = null; state.prices = {}; state.check = "Key saved."; render(); break; }
       case "clearUex": await save({ uexToken: "" }); state.comms = null; state.prices = {}; state.check = "Key removed."; render(); break;
+      case "listLoad": {
+        const box = $("#sl-code");
+        if (box) {
+          const c = cleanCode(box.value);
+          if (c.length !== 10) { state.listErr = "That code should be 10 letters and numbers (like ABCDE-12345)."; render(); break; }
+          state.list = "loading"; // so the redraw after saving doesn't start a second load
+          await save({ shotList: c, shotListStep: 0 });
+        }
+        loadList(); break;
+      }
+      case "listForget": state.list = null; state.listErr = ""; await save({ shotList: "", shotListStep: 0 }); break;
+      case "listPrev": await save({ shotListStep: Math.max(0, (s.shotListStep || 0) - 1) }); break;
+      case "listNext": await save({ shotListStep: (s.shotListStep || 0) + 1 }); break;
+      case "listHere": {
+        // point the Light tab and the corner light strip at this spot's place
+        const L = state.list, sp = Array.isArray(L) && L[Math.min(s.shotListStep || 0, L.length - 1)];
+        if (!sp || !DN.BODIES[sp.body]) break;
+        const pl = DN.findPlace(sp.place, sp.body) || placesOn(sp.body)[0];
+        await save({ system: DN.BODIES[sp.body][0], body: sp.body, place: pl ? pl[0] : "" });
+        state.tab = "light"; render(); break;
+      }
       case "fbYes": await save({ shareFeedback: true }); break;
       case "fbNo": await save({ shareFeedback: false }); break;
       case "checkUex": {

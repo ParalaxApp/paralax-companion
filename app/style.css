@@ -263,3 +263,9 @@ body[data-veil=light]{--veil:.30}
 /* 0.7.0: notices at the top of the panel (new version, the one-time usage-data question) */
 .notice{margin-bottom:12px}
 .notice .row{margin-top:10px}
+/* List tab (0.8.0): the code box, the gold "now" text and the list's rows */
+.in.code{font-family:var(--f-mono, monospace);letter-spacing:.18em;text-transform:uppercase}
+.gold-t{color:#ffd56a;font-weight:600}
+.ev.sl-row{width:100%;text-align:left;cursor:pointer;color:inherit;font:inherit;background:none;border:0;border-bottom:1px dotted rgba(236,238,241,.18);padding-left:6px;padding-right:6px}
+.ev.sl-row.on{border-color:rgba(255,194,26,.7);background:rgba(255,194,26,.12)}
+button[disabled]{opacity:.4;cursor:default}

@@ -41,6 +41,8 @@ const DEFAULTS = {
   shareFeedback: null,         // anonymous feedback data: version + Windows/Linux + "opened". null = not asked yet, so nothing is sent
   installId: "",               // a random ID made on this PC, so one person opening it 10 times counts once
   lastLocation: null,          // { text, at, kind } the last place /showlocation told us
+  shotList: "",                // the code of a shot list from paralaxverse.com (10 letters/numbers), or "" for none
+  shotListStep: 0,             // which spot on that list you're on
   feedbackAskedV2: false       // internal: we've reset the usage-data question for 0.7.0
 };
 const settingsFile = () => path.join(app.getPath("userData"), "settings.json");
@@ -386,6 +388,8 @@ handle("settings:set", (e, patch) => {
     if (d !== null && typeof v !== typeof d) continue;                                          // wrong kind of value: ignore
     if (typeof v === "string" && v.length > 300) continue;
     if (k === "shotsFolder" && /^(\\\\|\/\/)/.test(v)) continue;   // no network paths (\\server\share): Windows would try to sign in to them
+    if (k === "shotList" && !/^([0-9A-F]{10})?$/.test(v)) continue;    // only a real list code (or none)
+    if (k === "shotListStep" && !(Number.isInteger(v) && v >= 0 && v < 50)) continue;
     settings[k] = v;
   }
   if ("place" in patch || "body" in patch || "system" in patch) here = null;   // you picked somewhere yourself

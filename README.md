@@ -36,7 +36,8 @@ The companion never touches the game. It doesn't read the game's memory or files
 - **Your UEX key:** locked with your system's own encryption (Windows DPAPI, or your Linux keyring). If a Linux PC has no keyring, the key isn't saved at all and only lasts until the app closes. It's only ever sent to UEX.
 - **Usage data:** only if you say yes when it asks: a random ID, the version and Windows/Linux, when it opens and every 6 hours while it runs. Nothing about you or your game. Change it any time in Settings.
 - **Update check:** when it opens and every 6 hours, it asks GitHub for the newest version number (like any web request, GitHub sees your IP address). If there's a newer one, it tells you.
-- **Nothing else online:** fonts are built in; the Spots tab loads spots and photos from paralaxverse.com; the Trade tab talks to UEX.
+- **Shot list code:** if you type in a shot list code from your paralaxverse.com dossier, only that code (and which spot you're on) is saved on your PC. The List tab sends the code to paralaxverse.com to get the list's name and spots; nothing else about you goes with it. "Use another code" forgets it.
+- **Nothing else online:** fonts are built in; the Spots and List tabs load spots and photos from paralaxverse.com; the Trade tab talks to UEX.
 - **Downloads** come with a SHA-256 fingerprint on the release page, so you can check yours is genuine.
 - **Locked down:** the app's windows can't open other pages, new windows, or your camera, mic or location, and it ships with Electron's "fuses" set so it can't be misused as a general-purpose program runner.
 
