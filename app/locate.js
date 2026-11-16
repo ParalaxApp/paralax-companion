@@ -62,7 +62,7 @@
         // on (or just above) the ground
         if (near) return { system: b[0], body: name, place: near.x[0], kind: "surface", km: near.km, lat: ll.lat, lon: ll.lon,
           text: near.km < 15 ? `At ${near.x[0]}, ${name}` : `${Math.round(near.km)} km from ${near.x[0]}, ${name}` };
-        return { system: b[0], body: name, place: "", kind: "surface", km: 0, text: `On ${name}` };
+        return { system: b[0], body: name, place: "", kind: "surface", km: 0, lat: ll.lat, lon: ll.lon, text: `On ${name}` };
       }
       // higher up: in the air or in orbit. The light tab still follows the place below you.
       return { system: b[0], body: name, place: near ? near.x[0] : "", kind: "orbit", km: ll.alt, text: `Above ${name}, ${Math.round(ll.alt)} km up` + (near ? ` (over ${near.x[0]})` : "") };
@@ -79,5 +79,17 @@
       text: `In space, ${Math.round(near.d).toLocaleString("en-GB")} km from ${near.name}` };
   }
 
-  window.LOC = { parse, locate };
+  // "12.41°N 81.02°E": how a position is written (the same as the website, so it can be pasted there)
+  function latLonText(lat, lon) {
+    const ew = lon > 180 ? `${(360 - lon).toFixed(3)}°W` : `${lon.toFixed(3)}°E`;
+    return `${Math.abs(lat).toFixed(3)}°${lat < 0 ? "S" : "N"} ${ew}`;
+  }
+  // Paralax Verse grid squares (same as the website): bands A (north pole) to R (south pole), slices 1 to 36
+  // going east from 0°, then the 1° square inside, like "C7·43"
+  function gridRef(lat, lon) {
+    const fromTop = Math.min(179.999, Math.max(0, 90 - lat)), east = mod(lon, 360);
+    return `${"ABCDEFGHIJKLMNOPQR"[Math.floor(fromTop / 10)]}${Math.floor(east / 10) + 1}·${Math.floor(fromTop % 10)}${Math.floor(east % 10)}`;
+  }
+
+  window.LOC = { parse, locate, latLonText, gridRef };
 })();

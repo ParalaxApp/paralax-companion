@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("pv", {
   setSettings: (patch) => ipcRenderer.invoke("settings:set", patch),
   uex: (endpoint, params, ttl) => ipcRenderer.invoke("uex", endpoint, params, ttl),
   open: (url) => ipcRenderer.invoke("open", url),
+  copyPosition: () => ipcRenderer.invoke("copyPosition"),
   openFolder: () => ipcRenderer.invoke("openFolder"),
   hide: () => ipcRenderer.invoke("panel:hide"),
   pauseHotkey: (on) => ipcRenderer.invoke("panel:pauseHotkey", on),
